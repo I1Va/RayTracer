@@ -2,4 +2,10 @@
 #define RAY_TRACER_H
 
 
+class SceneManager {
+
+};
+
+
+
 #endif // RAY_TRACER_H
