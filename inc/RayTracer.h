@@ -49,13 +49,13 @@ private:
         }
     }
 
-    bool hitClosest(const Ray& ray, double rayTmin, double rayTmax, HitRecord& hitRecord) const {
+    bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
         HitRecord tempRecord = {};
         bool hitAnything = false;
-        double closestTime = rayTmax;
+        double closestTime = rayTime.max;
 
         for (SceneObject *object: sceneObjects_) {
-            if (object->hit(ray, rayTmin, closestTime, tempRecord)) {
+            if (object->hit(ray, Interval(rayTime.min, closestTime), tempRecord)) {
                 hitAnything = true;
                 closestTime = tempRecord.time;
                 hitRecord = tempRecord;
@@ -68,7 +68,7 @@ private:
     RTColor rayColor(const Ray& ray) {
         HitRecord HitRecord = {};
     
-         if (hitClosest(ray, 0, std::numeric_limits<double>::infinity(), HitRecord)) {
+         if (hitClosest(ray, Interval(0, std::numeric_limits<double>::infinity()), HitRecord)) {
             return (HitRecord.normal + RTColor(1,1,1)) * 0.5;
         }
 

@@ -35,6 +35,31 @@ struct HitRecord {
     }
 };
 
+struct Interval {
+    double min, max;
+
+    Interval() : min(+std::numeric_limits<double>::infinity()), max(-std::numeric_limits<double>::infinity()) {}
+
+    Interval(double min, double max) : min(min), max(max) {}
+
+    double size() const {
+        return max - min;
+    }
+
+    bool contains(double x) const {
+        return min <= x && x <= max;
+    }
+
+    bool surrounds(double x) const {
+        return min < x && x < max;
+    }
+
+    static const Interval empty, universe;
+};
+
+const Interval Interval::empty    = Interval(+std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity());
+const Interval Interval::universe = Interval(-std::numeric_limits<double>::infinity(), +std::numeric_limits<double>::infinity());
+
 struct SceneObject {
     const SceneManager *parent_;
     GmPoint<double, 3> position_; 
@@ -44,7 +69,7 @@ struct SceneObject {
 public:
     virtual ~SceneObject() = default;
 
-    virtual bool hit(const Ray& ray, double rayTmin, double rayTmax, HitRecord& hitRecord) const = 0;
+    virtual bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
 };
 
 class SphereObject : public SceneObject {
@@ -53,7 +78,7 @@ class SphereObject : public SceneObject {
 public:
     SphereObject(double radius, const SceneManager *parent=nullptr): SceneObject(parent), radius_(radius) {}
 
-    bool hit(const Ray& ray, double rayTmin, double rayTmax, HitRecord& hitRecord) const override {
+    bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const override {
         GmVec<double, 3> oc = position_ - ray.origin;
         double a = ray.direction.length2();
         double h = dot(ray.direction, oc);
@@ -66,9 +91,9 @@ public:
         double sqrtDiscriminant = std::sqrt(discriminant);
 
         double root = (h - sqrtDiscriminant) / a;
-        if (root <= rayTmin || root >= rayTmax) {
+        if (!rayTime.surrounds(root)) {
             root = (h + sqrtDiscriminant) / a;
-            if (root <= rayTmin || root >= rayTmax)
+            if (!rayTime.surrounds(root))
                 return false;
         }
 
