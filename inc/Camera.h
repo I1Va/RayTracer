@@ -54,7 +54,7 @@ public:
 
         return Ray(center_, rayDirection);
     }
-
+    
     const std::pair<int, int> &screenResolution() const { return screenResolution_; }
     void setPixel(const int pixelX, const int pixelY, const RTColor color) {
         pixels_[pixelX * screenResolution_.second + pixelY] = color;
