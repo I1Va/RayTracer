@@ -7,27 +7,20 @@
 
 
 struct RTColor {
-    int r = 0;
-    int g = 0;
-    int b = 0;
-    int a = 0;
+    uint8_t a,r,g,b;
 };
 
-class Ray {
+struct Ray{
 
-    GmPoint<double, 3> origin_;
-    GmVec<double, 3> direction_;
+    GmPoint<double, 3> origin;
+    GmVec<double, 3> direction;
 
-public:
     Ray() {}
 
-    Ray(const GmPoint<double, 3>& origin, const GmVec<double, 3> &direction) : origin_(origin), direction_(direction) {}
-
-    const GmPoint<double, 3>& origin() const { return origin_; }
-    const GmVec<double, 3>& direction() const { return direction_; }
+    Ray(const GmPoint<double, 3>& origin, const GmVec<double, 3> &direction) : origin(origin), direction(direction) {}
 
     GmPoint<double, 3> at(double t) const {
-        return origin_ + direction_ * t;
+        return origin + direction * t;
     }    
 };
 
@@ -77,6 +70,14 @@ public:
     }
 
     const std::pair<int, int> &screenResolution() const { return screenResolution_; }
+    void setPixel(const int pixelX, const int pixelY, const RTColor color) {
+        pixels_[pixelX * screenResolution_.second + pixelY] = color;
+    }
+    RTColor getPixel(const int pixelX, const int pixelY) const {
+        return pixels_[pixelX * screenResolution_.second + pixelY];
+    }
+
+    const std::vector<RTColor> pixels() const { return pixels_; }
 };
 
 
