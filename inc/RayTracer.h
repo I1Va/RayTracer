@@ -49,18 +49,31 @@ private:
         }
     }
 
-    RTColor rayColor(const Ray& ray) {
-        for (SceneObject *object : sceneObjects_) {
-            double t = object->rayHit(ray);
-            if (t > 0.0) {
-                GmVec<double, 3> N = (ray.at(t) - object->position_).normalized();
-                return RTColor(N.x()+1, N.y()+1, N.z()+1) * 0.5;
+    bool hitClosest(const Ray& ray, double rayTmin, double rayTmax, HitRecord& hitRecord) const {
+        HitRecord tempRecord = {};
+        bool hitAnything = false;
+        double closestTime = rayTmax;
+
+        for (SceneObject *object: sceneObjects_) {
+            if (object->hit(ray, rayTmin, closestTime, tempRecord)) {
+                hitAnything = true;
+                closestTime = tempRecord.time;
+                hitRecord = tempRecord;
             }
         }
 
-        double a = 0.5 * (ray.direction.normalized().x() + 1.0);
+        return hitAnything;
+    }
+
+    RTColor rayColor(const Ray& ray) {
+        HitRecord HitRecord = {};
     
-        return RTColor(1.0, 1.0, 1.0) * (1.0 - a) + RTColor(0.5, 0.7, 1.0) * a;
+         if (hitClosest(ray, 0, std::numeric_limits<double>::infinity(), HitRecord)) {
+            return (HitRecord.normal + RTColor(1,1,1)) * 0.5;
+        }
+
+        auto a = 0.5*(ray.direction.y() + 1.0);
+        return RTColor(1.0, 1.0, 1.0) * (1.0-a) + RTColor(0.5, 0.7, 1.0) * a;   
     }
 };
 
