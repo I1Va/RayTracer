@@ -28,7 +28,7 @@ struct SceneObject {
 
 public:
     virtual ~SceneObject() = default;
-    virtual bool rayHit(const Ray& ray) const = 0;
+    virtual double rayHit(const Ray& ray) const = 0;
 };
 
 class SphereObject : public SceneObject {
@@ -37,14 +37,19 @@ class SphereObject : public SceneObject {
 public:
     SphereObject(double radius, const SceneManager *parent=nullptr): SceneObject(parent), radius_(radius) {}
 
-    bool rayHit(const Ray& ray) const override {
+    double rayHit(const Ray& ray) const override {
         GmVec<double, 3> oc = position_ - ray.origin;
     
         auto a = dot(ray.direction, ray.direction);
         auto b = -2.0 * dot(ray.direction, oc);
         auto c = dot(oc, oc) - radius_*radius_;
         auto discriminant = b*b - 4*a*c;
-        return (discriminant >= 0);
+
+        if (discriminant < 0) {
+            return -1.0;
+        } else {
+            return (-b - std::sqrt(discriminant) ) / (2.0*a);
+        }
     }
 };
 

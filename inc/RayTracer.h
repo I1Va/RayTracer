@@ -51,8 +51,10 @@ private:
 
     RTColor rayColor(const Ray& ray) {
         for (SceneObject *object : sceneObjects_) {
-            if (object->rayHit(ray)) {
-                return {1.0, 0.0, 0.0};
+            double t = object->rayHit(ray);
+            if (t > 0.0) {
+                GmVec<double, 3> N = (ray.at(t) - object->position_).normalized();
+                return RTColor(N.x()+1, N.y()+1, N.z()+1) * 0.5;
             }
         }
 
