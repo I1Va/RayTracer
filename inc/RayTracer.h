@@ -3,19 +3,33 @@
 
 #include "Geom.h"
 #include "Camera.h"
-
-
-class SceneObject {
-    GmVec<double, 3> pos_;
-};
-
+#include "Objects.h"
 
 class SceneManager {
     std::vector<SceneObject *> sceneObjects_;
 
 public:
     explicit SceneManager() {};
+    ~SceneManager() {
+        for (SceneObject *object : sceneObjects_) {
+            delete object;
+        }
+    }
 
+    bool addObject(const GmPoint<double, 3> &position, SceneObject *object) {
+        assert(object);
+
+        if (object->parent_ != this) {
+            std::cerr << "addObject failed : object parent != this\n";
+            return false;
+        }
+        
+        object->parent_ = this;
+        object->position_ = position;
+        sceneObjects_.push_back(object);
+
+        return true;
+    }
     
     void render(Camera &camera) {
         update();
@@ -36,7 +50,15 @@ private:
     }
 
     RTColor rayColor(const Ray& ray) {
-        return {(uint8_t) 255, (uint8_t) (ray.direction.length2() * 100), (uint8_t) (ray.direction.length2() * 100), (uint8_t) (ray.direction.length2() * 100)};
+        for (SceneObject *object : sceneObjects_) {
+            if (object->rayHit(ray)) {
+                return {1.0, 0.0, 0.0};
+            }
+        }
+
+        double a = 0.5 * (ray.direction.normalized().x() + 1.0);
+    
+        return RTColor(1.0, 1.0, 1.0) * (1.0 - a) + RTColor(0.5, 0.7, 1.0) * a;
     }
 };
 

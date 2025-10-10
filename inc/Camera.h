@@ -3,26 +3,12 @@
 
 
 #include <vector>
+
 #include "Geom.h"
+#include "Objects.h"
 
+using RTColor = GmVec<double, 3>;
 
-struct RTColor {
-    uint8_t a,r,g,b;
-};
-
-struct Ray{
-
-    GmPoint<double, 3> origin;
-    GmVec<double, 3> direction;
-
-    Ray() {}
-
-    Ray(const GmPoint<double, 3>& origin, const GmVec<double, 3> &direction) : origin(origin), direction(direction) {}
-
-    GmPoint<double, 3> at(double t) const {
-        return origin + direction * t;
-    }    
-};
 
 struct Viewport {
     static constexpr const double VIEWPORT_WIDTH = 1;
