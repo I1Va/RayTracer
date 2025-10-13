@@ -4,18 +4,20 @@
 #include <vector>
 
 #include "RTGeometry.h"
-#include "Scene.h"
+#include "RTObjects.h"
 class SceneManager;
 
+const int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
+const int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
 
 using RTColor = GmVec<double, 3>;
 
-const int CAMERA_SAMPLES_PER_PIXEL = 3;
 
 
 struct Viewport {
     static constexpr const double VIEWPORT_WIDTH = 1;
     static constexpr const double VIEWPORT_HEIGHT = 1;
+    
     GmPoint<double, 3> upperLeft_;
     GmVec<double, 3> rightDir_;
     GmVec<double, 3> downDir_;
@@ -32,19 +34,21 @@ class Camera {
     std::vector<RTColor> pixels_ = {};
 
     double pixelSamplesScale_ = 0;
-    int samplesPerPixel_ = CAMERA_SAMPLES_PER_PIXEL;
+
+public:
+    int samplesPerPixel = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
+    int maxRayDepth = DEFAULT_CAMERA_MAX_RAY_DEPTH;
 
 public:
     Camera();
  
     Camera
     (
-        const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution, 
-        const int samplesPerPixel=CAMERA_SAMPLES_PER_PIXEL
+        const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution
     );
 
 
-    RTColor getRayColor(const Ray& ray, const SceneManager& sceneManager) const;
+    RTColor getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const;
 
     Ray genRay(int pixelX, int pixelY);
 

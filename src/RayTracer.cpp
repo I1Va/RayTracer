@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "Scene.h"
+#include "RTObjects.h"
 #include "RayTracer.h"
 #include "Camera.h"
 

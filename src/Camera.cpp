@@ -2,20 +2,18 @@
 
 #include "Camera.h"
 #include "RayTracer.h"
-#include "Utilities.h"
 
+static const int CLOSEST_HIT_MIN_T = 0.001;
 
 Camera::Camera(): direction_(0, 0, 1) {}
 
 Camera::Camera
 (
-    const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution, 
-    const int samplesPerPixel
+    const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution
 ): 
-    center_(center), direction_(direction.normalized()), screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second),
-    samplesPerPixel_(samplesPerPixel)
+    center_(center), direction_(direction.normalized()), screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
 {   
-    pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
+    pixelSamplesScale_ = 1.0 / samplesPerPixel; 
     GmVec<double,3> A(1,0,0);
     if (std::abs(direction_.x()) > 0.999) A = GmVec<double,3>(0,1,0);
 
@@ -25,11 +23,14 @@ Camera::Camera
 };
 
 
-RTColor Camera::getRayColor(const Ray& ray, const SceneManager& sceneManager) const {
+RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const {
+    if (depth == 0) return RTColor(0,0,0);
+
     HitRecord HitRecord = {};
 
-        if (sceneManager.hitClosest(ray, Interval(0, std::numeric_limits<double>::infinity()), HitRecord)) {
-            return (HitRecord.normal + RTColor(1,1,1)) * 0.5;
+    if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), HitRecord)) {
+        GmVec<double, 3> direction = randomOnHemisphere(HitRecord.normal);
+        return getRayColor(Ray(HitRecord.point, direction),  depth - 1, sceneManager) * 0.5;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
@@ -53,9 +54,9 @@ void Camera::render(const SceneManager& sceneManager) {
     for (int pixelX = 0; pixelX < screenResolution_.first; pixelX++) {
         for (int pixelY = 0; pixelY < screenResolution_.second; pixelY++) {
             RTColor sampleSumColor = RTColor(0,0,0);
-            for (int sample = 0; sample < samplesPerPixel_; sample++) {
+            for (int sample = 0; sample < samplesPerPixel; sample++) {
                 Ray ray = genRay(pixelX, pixelY);
-                RTColor rayColor = getRayColor(ray, sceneManager);
+                RTColor rayColor = getRayColor(ray, maxRayDepth, sceneManager);
                 sampleSumColor += rayColor;
             }
             setPixel(pixelX, pixelY, sampleSumColor * pixelSamplesScale_);

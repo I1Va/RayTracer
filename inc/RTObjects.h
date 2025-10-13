@@ -1,18 +1,22 @@
-#ifndef OBJECTS_H
-#define OBJECTS_H
+#ifndef RTOBJECTS_H
+#define RTOBJECTS_H
 
 #include <vector>
 
 #include "Geom.h"
+#include "RTMaterial.h"
 #include "RTGeometry.h"
 class SceneManager;
 
 
 struct SceneObject {
+    const RTMaterial *material_;
     const SceneManager *parent_;
     GmPoint<double, 3> position_; 
 
-    SceneObject(const SceneManager *parent=nullptr): parent_(parent) {}
+    SceneObject(const RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
+        assert(material);
+    }
 
 public:
     virtual ~SceneObject() = default;
@@ -24,7 +28,7 @@ class SphereObject : public SceneObject {
     double radius_;
 
 public:
-    SphereObject(double radius, const SceneManager *parent=nullptr): SceneObject(parent), radius_(radius) {}
+    SphereObject(double radius, const RTMaterial *material, const SceneManager *parent=nullptr): SceneObject(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const override {
         GmVec<double, 3> oc = position_ - ray.origin;
@@ -56,4 +60,4 @@ public:
 };
 
 
-#endif // OBJECTS_H
+#endif // RTOBJECTS_H

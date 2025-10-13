@@ -2,6 +2,16 @@
 #define RTGEOMETRY_H
 
 #include "Geom.h"
+#include "Utilities.h"
+
+
+inline GmVec<double, 3> randomOnHemisphere(const GmVec<double, 3>& normal) {
+    GmVec<double, 3> on_unit_sphere = randomUnitVector();
+    if (dot(on_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
+        return on_unit_sphere;
+    else
+        return on_unit_sphere * (-1);
+}
 
 
 struct Ray {
