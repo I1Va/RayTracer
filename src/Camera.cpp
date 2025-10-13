@@ -13,7 +13,7 @@ Camera::Camera
 ): 
     center_(center), direction_(direction.normalized()), screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
 {   
-    pixelSamplesScale_ = 1.0 / samplesPerPixel; 
+    pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
     GmVec<double,3> A(1,0,0);
     if (std::abs(direction_.x()) > 0.999) A = GmVec<double,3>(0,1,0);
 
@@ -54,7 +54,7 @@ void Camera::render(const SceneManager& sceneManager) {
     for (int pixelX = 0; pixelX < screenResolution_.first; pixelX++) {
         for (int pixelY = 0; pixelY < screenResolution_.second; pixelY++) {
             RTColor sampleSumColor = RTColor(0,0,0);
-            for (int sample = 0; sample < samplesPerPixel; sample++) {
+            for (int sample = 0; sample < samplesPerPixel_; sample++) {
                 Ray ray = genRay(pixelX, pixelY);
                 RTColor rayColor = getRayColor(ray, maxRayDepth, sceneManager);
                 sampleSumColor += rayColor;
@@ -75,3 +75,8 @@ RTColor Camera::getPixel(const int pixelX, const int pixelY) const {
 }
 
 const std::vector<RTColor> Camera::pixels() const { return pixels_; }
+
+void Camera::setSamplesPerPixel(int newVal) {
+    samplesPerPixel_ = newVal;
+    pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
+}
