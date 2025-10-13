@@ -7,6 +7,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(RayTracer STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src/RayTracer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/Camera.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/RTGeometry.cpp
 )
 
 target_include_directories(RayTracer

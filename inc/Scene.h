@@ -1,8 +1,9 @@
 #ifndef OBJECTS_H
 #define OBJECTS_H
 
+#include <vector>
 
-
+#include "Geom.h"
 #include "RTGeometry.h"
 class SceneManager;
 
