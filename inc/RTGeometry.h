@@ -18,6 +18,12 @@ inline GmVec<double, 3> reflect(const GmVec<double, 3>& v, const GmVec<double, 3
     return v - n * 2 * dot(v,n) ;
 }
 
+inline GmVec<double, 3> refract(const GmVec<double, 3>& uv, const GmVec<double, 3>& n, double refractionCoef) {
+    auto cosTheta = std::fmin(dot(uv * (-1), n), 1.0);
+    GmVec<double, 3> rOutPerp = (uv + n * cosTheta) * refractionCoef;
+    GmVec<double, 3> rOutParallel = n * (-std::sqrt(std::fabs(1.0 - rOutPerp.length2())));
+    return rOutPerp + rOutParallel;
+}
 
 struct Ray {
 

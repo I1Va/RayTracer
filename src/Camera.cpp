@@ -82,7 +82,7 @@ Ray Camera::genRay(int pixelX, int pixelY) {
     
     GmVec<double, 3> rayDirection = viewPortPoint - center_;
 
-    return Ray(center_, rayDirection);
+    return Ray(center_, rayDirection.normalized());
 }
 
 void Camera::render(const SceneManager& sceneManager) {
