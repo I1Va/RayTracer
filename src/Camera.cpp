@@ -3,7 +3,34 @@
 #include "Camera.h"
 #include "RayTracer.h"
 
+
 static const int CLOSEST_HIT_MIN_T = 0.001;
+
+
+inline double linearToGamma(double linear_component)
+{
+    if (linear_component > 0)
+        return std::sqrt(linear_component);
+
+    return 0;
+}
+
+RTPixelColor convertRTColor(const RTColor &color) {  
+    double r = color.x();
+    double g = color.y();
+    double b = color.z();
+
+    r = linearToGamma(r);
+    g = linearToGamma(g);
+    b = linearToGamma(b);
+
+    static const Interval intensity(0.000, 0.999);
+    uint8_t rbyte = uint8_t(256 * intensity.clamp(r));
+    uint8_t gbyte = uint8_t(256 * intensity.clamp(g));
+    uint8_t bbyte = uint8_t(256 * intensity.clamp(b));
+
+    return { rbyte, gbyte, bbyte, 255 };
+}
 
 Camera::Camera(): direction_(0, 0, 1) {}
 
@@ -14,12 +41,17 @@ Camera::Camera
     center_(center), direction_(direction.normalized()), screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
 {   
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
-    GmVec<double,3> A(1,0,0);
-    if (std::abs(direction_.x()) > 0.999) A = GmVec<double,3>(0,1,0);
+    GmVec<double,3> worldUp(0.0, 0.0, 1.0);
+    if (std::abs(dot(direction_, worldUp)) > 0.999)
+        worldUp = GmVec<double,3>(0.0, 1.0, 0.0);
 
-    viewPort_.rightDir_ = cross(A, direction_).normalized();
+    viewPort_.rightDir_ = cross(direction_, worldUp).normalized();
     viewPort_.downDir_ = cross(direction_, viewPort_.rightDir_).normalized();
-    viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - viewPort_.rightDir_ * 0.5 - viewPort_.downDir_ * 0.5; 
+
+    GmVec<double,3> rightFull = viewPort_.rightDir_ * viewPort_.VIEWPORT_WIDTH;
+    GmVec<double,3> downFull    = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
+
+    viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - rightFull* 0.5 - downFull * 0.5; 
 };
 
 
@@ -29,8 +61,11 @@ RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& scene
     HitRecord HitRecord = {};
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), HitRecord)) {
-        GmVec<double, 3> direction = randomOnHemisphere(HitRecord.normal);
-        return getRayColor(Ray(HitRecord.point, direction),  depth - 1, sceneManager) * 0.5;
+        Ray scattered = {};
+        RTColor attenuation = {};
+        if (HitRecord.material->scatter(ray, HitRecord, attenuation, scattered))
+            return attenuation * getRayColor(scattered, depth-1, sceneManager);
+        return RTColor(0,0,0);
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
@@ -58,23 +93,23 @@ void Camera::render(const SceneManager& sceneManager) {
                 Ray ray = genRay(pixelX, pixelY);
                 RTColor rayColor = getRayColor(ray, maxRayDepth, sceneManager);
                 sampleSumColor += rayColor;
-            }
-            setPixel(pixelX, pixelY, sampleSumColor * pixelSamplesScale_);
+            }   
+            setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
         }
     }
 }
 
 const std::pair<int, int> &Camera::screenResolution() const { return screenResolution_; }
 
-void Camera::setPixel(const int pixelX, const int pixelY, const RTColor color) {
+void Camera::setPixel(const int pixelX, const int pixelY, const RTPixelColor color) {
     pixels_[pixelX * screenResolution_.second + pixelY] = color;
 }
 
-RTColor Camera::getPixel(const int pixelX, const int pixelY) const {
+RTPixelColor Camera::getPixel(const int pixelX, const int pixelY) const {
     return pixels_[pixelX * screenResolution_.second + pixelY];
 }
 
-const std::vector<RTColor> Camera::pixels() const { return pixels_; }
+const std::vector<RTPixelColor> Camera::pixels() const { return pixels_; }
 
 void Camera::setSamplesPerPixel(int newVal) {
     samplesPerPixel_ = newVal;

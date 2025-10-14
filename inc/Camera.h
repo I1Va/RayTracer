@@ -10,9 +10,9 @@ class SceneManager;
 const int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
 const int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
 
-using RTColor = GmVec<double, 3>;
-
-
+struct RTPixelColor {
+    uint8_t r, g, b, a;
+};
 
 struct Viewport {
     static constexpr const double VIEWPORT_WIDTH = 1;
@@ -31,7 +31,7 @@ class Camera {
     Viewport viewPort_ = {};
 
     std::pair<int, int> screenResolution_ = {};
-    std::vector<RTColor> pixels_ = {};
+    std::vector<RTPixelColor> pixels_ = {};
 
     double pixelSamplesScale_ = 0;
 
@@ -55,11 +55,11 @@ public:
 
     const std::pair<int, int> &screenResolution() const;
 
-    void setPixel(const int pixelX, const int pixelY, const RTColor color);
+    void setPixel(const int pixelX, const int pixelY, const RTPixelColor color);
 
-    RTColor getPixel(const int pixelX, const int pixelY) const;
+    RTPixelColor getPixel(const int pixelX, const int pixelY) const;
 
-    const std::vector<RTColor> pixels() const;
+    const std::vector<RTPixelColor> pixels() const;
 
     void setSamplesPerPixel(int newVal);
 };

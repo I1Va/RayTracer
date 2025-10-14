@@ -4,14 +4,15 @@
 
 #include "RTGeometry.h"
 #include "Utilities.h"
+using RTColor = GmVec<double, 3>;
+
 
 struct RTMaterial {
     virtual ~RTMaterial() = default;
 
     virtual bool scatter(
         const Ray& inRay,
-        const GmPoint<double,3>& hitPoint,
-        const GmVec<double,3>& normal,
+        const HitRecord &hitRecord,
         GmVec<double,3>& attenuation,
         Ray& scattered
     ) const = 0;
@@ -26,17 +27,34 @@ struct RTLambertian : public RTMaterial {
         : albedo_(albedo) {}
 
     bool scatter(const Ray& inRay,
-                 const GmPoint<double,3>& hitPoint,
-                 const GmVec<double,3>& normal,
+                 const HitRecord &hitRecord,
                  GmVec<double,3>& attenuation,
                  Ray& scattered) const override
     {
-        GmVec<double,3> scatterDir = normal + randomUnitVector();
+        GmVec<double,3> scatterDir = hitRecord.normal + randomUnitVector();
 
         if (scatterDir.nearZero())
-            scatterDir = normal;
+            scatterDir = hitRecord.normal;
 
-        scattered = Ray(hitPoint, scatterDir.normalized());
+        scattered = Ray(hitRecord.point, scatterDir.normalized());
+        attenuation = albedo_;
+        return true;
+    }
+};
+
+class RTMetal : public RTMaterial {
+    GmVec<double,3> albedo_; 
+
+public:
+    RTMetal(const RTColor& albedo) : albedo_(albedo) {}
+
+    bool scatter(const Ray& inRay,
+                const HitRecord &hitRecord,
+                GmVec<double,3>& attenuation,
+                Ray& scattered) const override
+    {
+        GmVec<double,3> reflected = reflect(inRay.direction, hitRecord.normal);
+        scattered = Ray(hitRecord.point, reflected);
         attenuation = albedo_;
         return true;
     }

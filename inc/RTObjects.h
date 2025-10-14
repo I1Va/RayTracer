@@ -49,6 +49,7 @@ public:
                 return false;
         }
 
+        hitRecord.material = material_;
         hitRecord.time = root;
         hitRecord.point = ray.origin + ray.direction * root;
         

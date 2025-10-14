@@ -2,15 +2,20 @@
 #define RTGEOMETRY_H
 
 #include "Geom.h"
+class RTMaterial;
 #include "Utilities.h"
 
 
 inline GmVec<double, 3> randomOnHemisphere(const GmVec<double, 3>& normal) {
     GmVec<double, 3> on_unit_sphere = randomUnitVector();
-    if (dot(on_unit_sphere, normal) > 0.0) // In the same hemisphere as the normal
+    if (dot(on_unit_sphere, normal) > 0.0)
         return on_unit_sphere;
     else
         return on_unit_sphere * (-1);
+}
+
+inline GmVec<double, 3> reflect(const GmVec<double, 3>& v, const GmVec<double, 3>& n) {
+    return v - n * 2 * dot(v,n) ;
 }
 
 
@@ -31,13 +36,11 @@ struct Ray {
 struct HitRecord {
     GmPoint<double, 3> point = {};
     GmVec<double, 3> normal = {};
+    const RTMaterial *material = nullptr;
     bool frontFace = false;
     double time = 0;
 
     void setFaceNormal(const Ray& ray, const GmVec<double, 3>& outwardNormal) {
-        // Sets the hit record normal vector.
-        // NOTE: the parameter `outward_normal` is assumed to have unit length.
-
         frontFace = dot(ray.direction, outwardNormal) < 0;
         normal = frontFace ? outwardNormal : outwardNormal * (-1);
     }
