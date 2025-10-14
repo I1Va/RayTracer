@@ -44,9 +44,10 @@ struct RTLambertian : public RTMaterial {
 
 class RTMetal : public RTMaterial {
     GmVec<double,3> albedo_; 
+    double fuzz_;
 
 public:
-    RTMetal(const RTColor& albedo) : albedo_(albedo) {}
+    RTMetal(const RTColor& albedo, double fuzz) : albedo_(albedo), fuzz_(fuzz < 1 ? fuzz : 1) {}
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
@@ -54,6 +55,7 @@ public:
                 Ray& scattered) const override
     {
         GmVec<double,3> reflected = reflect(inRay.direction, hitRecord.normal);
+        reflected = reflected.normalized() + randomUnitVector() * fuzz_;
         scattered = Ray(hitRecord.point, reflected);
         attenuation = albedo_;
         return true;
