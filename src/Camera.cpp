@@ -62,10 +62,13 @@ RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& scene
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), HitRecord)) {
         Ray scattered = {};
+        RTColor emitted = HitRecord.material->emitted();
         RTColor attenuation = {};
+
         if (HitRecord.material->scatter(ray, HitRecord, attenuation, scattered))
-            return attenuation * getRayColor(scattered, depth-1, sceneManager);
-        return RTColor(0,0,0);
+            return emitted + attenuation * getRayColor(scattered, depth-1, sceneManager);
+        else
+            return emitted;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
@@ -76,7 +79,7 @@ Ray Camera::genRay(int pixelX, int pixelY) {
     double deltaWidth = viewPort_.VIEWPORT_WIDTH / screenResolution_.first;
     double deltaHeight = viewPort_.VIEWPORT_HEIGHT / screenResolution_.second;
 
-    GmPoint<double, 3> viewPortPoint =  viewPort_.upperLeft_                              +
+    GmPoint<double, 3> viewPortPoint =  viewPort_.upperLeft_                                                 +
                                         viewPort_.rightDir_ * (pixelX + randomDouble(0.0, 1.0)) * deltaWidth +
                                         viewPort_.downDir_  * (pixelY + randomDouble(0.0, 1.0)) * deltaHeight;
     

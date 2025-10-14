@@ -20,9 +20,10 @@ struct RTMaterial {
     virtual GmVec<double,3> emitted() const { return {0.0, 0.0, 0.0}; }
 };
 
-struct RTLambertian : public RTMaterial {
+class RTLambertian : public RTMaterial {
     GmVec<double,3> albedo_; 
 
+public:
     explicit RTLambertian(const GmVec<double,3>& albedo)
         : albedo_(albedo) {}
 
@@ -105,5 +106,19 @@ private:
     }
 };
 
+class RTEmissive : public RTMaterial {
+    GmVec<double,3> emission_;
+public:
+    explicit RTEmissive(const GmVec<double,3>& emission)
+        : emission_(emission) {}
+
+    bool scatter(const Ray&, const HitRecord&, GmVec<double,3>&, Ray&) const override {
+        return false;
+    }
+
+    GmVec<double,3> emitted() const override {
+        return emission_;
+    }
+};
 
 #endif // #define RTMATERIAL_H
