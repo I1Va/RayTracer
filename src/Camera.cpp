@@ -3,8 +3,10 @@
 #include "Camera.h"
 #include "RayTracer.h"
 
+#include "Output.h"
 
-static const int CLOSEST_HIT_MIN_T = 0.001;
+
+static const double CLOSEST_HIT_MIN_T = 0.001;
 
 
 inline double linearToGamma(double linear_component)
@@ -94,7 +96,9 @@ void Camera::render(const SceneManager& sceneManager) {
             RTColor sampleSumColor = RTColor(0,0,0);
             for (int sample = 0; sample < samplesPerPixel_; sample++) {
                 Ray ray = genRay(pixelX, pixelY);
-                RTColor rayColor = getRayColor(ray, maxRayDepth, sceneManager);
+                RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
+                
+                
                 sampleSumColor += rayColor;
             }   
             setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
@@ -118,3 +122,5 @@ void Camera::setSamplesPerPixel(int newVal) {
     samplesPerPixel_ = newVal;
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
 }
+
+void Camera::setMaxRayDepth(int newVal) { maxRayDepth_ = newVal; }

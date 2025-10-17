@@ -66,7 +66,6 @@ public:
 class RTDielectric : public RTMaterial {
     double refractionIndex_;
 
-
 public:
     RTDielectric(double refractionIndex) : refractionIndex_(refractionIndex) {}
 
@@ -75,30 +74,32 @@ public:
                 GmVec<double,3> &attenuation,
                 Ray& scattered) const override
     {
-        attenuation = {1.0, 1.0, 1.0};
-        double refractionRatio = hitRecord.frontFace ? (1.0/refractionIndex_) : refractionIndex_;
+        attenuation = RTColor(1.0, 1.0, 1.0);
 
-        
-        GmVec<double,3> unitDirection = inRay.direction.normalized();
+        double eta = hitRecord.frontFace ? (1.0 / refractionIndex_) : refractionIndex_;
 
+        GmVec<double,3> unitDir = inRay.direction.normalized();
+        double cosTheta = std::fmin(dot(unitDir * (-1), hitRecord.normal), 1.0);
+        double sinTheta = std::sqrt(std::max(0.0, 1.0 - cosTheta * cosTheta));
 
-        double cosTheta = std::fmin(dot(unitDirection * (-1), hitRecord.normal), 1.0);
-        double sinTheta = std::sqrt(1.0 - cosTheta*cosTheta);
+        bool cannotRefract = eta * sinTheta > 1.0;
 
-        bool cannotRefract = refractionRatio * sinTheta > 1.0;
-    
-        GmVec<double,3> direction = {};
-        if (cannotRefract || reflectance(cosTheta, refractionRatio) > randomDouble())
-            direction = reflect(unitDirection, hitRecord.normal);
-        else
-            direction = refract(unitDirection, hitRecord.normal, refractionRatio);
+        GmVec<double,3> direction;
+        if (cannotRefract || reflectance(cosTheta, eta) > randomDouble()) {
+            direction = reflect(unitDir, hitRecord.normal);
+        } else {
+            GmVec<double,3> refr;
+            direction = refract(unitDir, hitRecord.normal, eta).normalized();
+        }
 
-        scattered = Ray(hitRecord.point, direction.normalized());
+        constexpr double ORIGIN_EPS = 1e-4;
+        GmPoint<double,3> newOrigin = hitRecord.point + hitRecord.normal * (hitRecord.frontFace ? ORIGIN_EPS : -ORIGIN_EPS);
+
+        scattered = Ray(newOrigin, direction.normalized());
         return true;
     }
 
 private:
-    // Schlick's approximation for reflectance.
     static double reflectance(double cosine, double refractionIndex) {   
         auto r0 = (1 - refractionIndex) / (1 + refractionIndex);
         r0 = r0*r0;
@@ -120,5 +121,6 @@ public:
         return emission_;
     }
 };
+
 
 #endif // #define RTMATERIAL_H

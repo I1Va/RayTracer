@@ -36,7 +36,7 @@ class Camera {
     double pixelSamplesScale_ = 0;
 
     int samplesPerPixel_ = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
-    int maxRayDepth = DEFAULT_CAMERA_MAX_RAY_DEPTH;
+    int maxRayDepth_ = DEFAULT_CAMERA_MAX_RAY_DEPTH;
 
 public:
     Camera();
@@ -62,6 +62,7 @@ public:
     const std::vector<RTPixelColor> pixels() const;
 
     void setSamplesPerPixel(int newVal);
+    void setMaxRayDepth(int newVal);
 };
 
 

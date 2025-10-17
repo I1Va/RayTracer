@@ -19,14 +19,20 @@ inline GmVec<double, 3> reflect(const GmVec<double, 3>& v, const GmVec<double, 3
 }
 
 inline GmVec<double, 3> refract(const GmVec<double, 3>& uv, const GmVec<double, 3>& n, double refractionCoef) {
-    auto cosTheta = std::fmin(dot(uv * (-1), n), 1.0);
-    GmVec<double, 3> rOutPerp = (uv + n * cosTheta) * refractionCoef;
-    GmVec<double, 3> rOutParallel = n * (-std::sqrt(std::fabs(1.0 - rOutPerp.length2())));
+    GmVec<double, 3> unitUv = uv.normalized();
+    double cosTheta = std::fmin(dot(unitUv * (-1), n), 1.0);
+
+    GmVec<double, 3> rOutPerp = (unitUv + n * cosTheta) * refractionCoef;
+
+    if (1.0 - rOutPerp.length2() < 0) rOutPerp = rOutPerp * (1.0 / (refractionCoef * refractionCoef));
+
+    assert(1.0 - rOutPerp.length2() > 0);
+    GmVec<double, 3> rOutParallel = n * (-std::sqrt(1.0 - rOutPerp.length2()));
+
     return rOutPerp + rOutParallel;
 }
 
 struct Ray {
-
     GmPoint<double, 3> origin;
     GmVec<double, 3> direction;
 
