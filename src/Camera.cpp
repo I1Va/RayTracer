@@ -59,16 +59,22 @@ Camera::Camera
 
 
 
-// RTColor Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) {
-//     RTColor summaryLighting = {0, 0, 0};
+GmVec<double, 3> Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const {
+    GmVec<double, 3> summaryLighting = {0, 0, 0};
 
-//     for (Light *lightSrc : sceneManager.inderectLightSources()) {
-        
+    GmVec<double, 3> toView = center_ - rec.point;
 
+    for (Light *lightSrc : sceneManager.inderectLightSources()) {
+        HitRecord tmp;
+        Ray toLightRay = Ray(rec.point, lightSrc->center() - rec.point);
+        if (sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp))
+            continue;
+    
+        summaryLighting += lightSrc->getDirectLighting(rec.point, rec.normal, toView, rec.material);    
+    }
 
-
-//     }
-// }
+    return summaryLighting;
+}
 
 RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
@@ -77,14 +83,16 @@ RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& scene
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
         Ray scattered = {};
-        RTColor emitted = rec.material->emitted();
-        // RTColor Ldirect = computeDirectLighting(rec, sceneManager);
         RTColor attenuation = {};
-
-        if (rec.material->scatter(ray, rec, attenuation, scattered))
-            return emitted + attenuation * getRayColor(scattered, depth-1, sceneManager);
-        else
-            return emitted;
+    
+        GmVec<double, 3> emitted = rec.material->emitted();
+        GmVec<double, 3> Ldirect = computeDirectLighting(rec, sceneManager);
+        
+        if (rec.material->scatter(ray, rec, attenuation, scattered)) {
+            GmVec<double, 3> LIndirect = attenuation * getRayColor(scattered, depth-1, sceneManager);
+            return emitted + Ldirect + LIndirect;
+        }
+        return emitted + Ldirect;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);

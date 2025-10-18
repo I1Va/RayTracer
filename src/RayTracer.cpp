@@ -14,17 +14,26 @@ const std::vector<Light *> &SceneManager::inderectLightSources() const {
     return inderectLightSources_;
 }
 
-void SceneManager::addObject(const GmPoint<double, 3> &position, Primitives *object) {
+void SceneManager::addObject(const GmPoint<double, 3> position, Primitives *object) {
     assert(object);
 
-    if (object->parent_ != this) {
-        std::cerr << "addObject failed : object parent != this\n";
-        assert(0);
-    }
+    if (object->parent_ != this && object->parent_ != nullptr) 
+        assert(0 && "addObject failed : object parent != this or nullptr");
     
     object->parent_ = this;
     object->position_ = position;
     Primitivess_.push_back(object);
+}
+
+void SceneManager::addLight(const GmPoint<double, 3> position, Light *object) {
+    assert(object);
+
+    if (object->parent() != this && object->parent() != nullptr) 
+        assert(0 && "addObject failed : object parent != this or nullptr");
+    
+    object->setParent(this);
+    object->setPosition(position);
+    inderectLightSources_.push_back(object);
 }
 
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
