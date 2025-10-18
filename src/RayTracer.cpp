@@ -6,11 +6,15 @@
 
 
 SceneManager::~SceneManager() {
-    for (SceneObject *object : sceneObjects_)
+    for (Primitives *object : Primitivess_)
         delete object;
 }
 
-void SceneManager::addObject(const GmPoint<double, 3> &position, SceneObject *object) {
+const std::vector<Light *> &SceneManager::inderectLightSources() const {
+    return inderectLightSources_;
+}
+
+void SceneManager::addObject(const GmPoint<double, 3> &position, Primitives *object) {
     assert(object);
 
     if (object->parent_ != this) {
@@ -20,7 +24,7 @@ void SceneManager::addObject(const GmPoint<double, 3> &position, SceneObject *ob
     
     object->parent_ = this;
     object->position_ = position;
-    sceneObjects_.push_back(object);
+    Primitivess_.push_back(object);
 }
 
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
@@ -28,7 +32,7 @@ bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRe
     bool hitAnything = false;
     double closestTime = rayTime.max;
 
-    for (SceneObject *object: sceneObjects_) {
+    for (Primitives *object: Primitivess_) {
         if (object->hit(ray, Interval(rayTime.min, closestTime), tempRecord)) {
             hitAnything = true;
             closestTime = tempRecord.time;

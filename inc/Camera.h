@@ -46,6 +46,7 @@ public:
         const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution
     );
 
+    RTColor computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager);
 
     RTColor getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const;
 

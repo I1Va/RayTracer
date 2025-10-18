@@ -6,15 +6,19 @@ class Camera;
 
 
 class SceneManager {
-    std::vector<SceneObject *> sceneObjects_;
+    std::vector<Primitives *> Primitivess_;
+
+    std::vector<Light *> inderectLightSources_;
 public:
     SceneManager() = default;
 
     ~SceneManager();
 
-    void addObject(const GmPoint<double, 3> &position, SceneObject *object);
+    void addObject(const GmPoint<double, 3> &position, Primitives *object);
 
     bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const;
+
+    const std::vector<Light *> &inderectLightSources() const;
 
     void render(Camera &camera);
 

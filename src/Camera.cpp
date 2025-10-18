@@ -57,17 +57,31 @@ Camera::Camera
 };
 
 
+
+
+// RTColor Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) {
+//     RTColor summaryLighting = {0, 0, 0};
+
+//     for (Light *lightSrc : sceneManager.inderectLightSources()) {
+        
+
+
+
+//     }
+// }
+
 RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
 
-    HitRecord HitRecord = {};
+    HitRecord rec = {};
 
-    if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), HitRecord)) {
+    if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
         Ray scattered = {};
-        RTColor emitted = HitRecord.material->emitted();
+        RTColor emitted = rec.material->emitted();
+        // RTColor Ldirect = computeDirectLighting(rec, sceneManager);
         RTColor attenuation = {};
 
-        if (HitRecord.material->scatter(ray, HitRecord, attenuation, scattered))
+        if (rec.material->scatter(ray, rec, attenuation, scattered))
             return emitted + attenuation * getRayColor(scattered, depth-1, sceneManager);
         else
             return emitted;

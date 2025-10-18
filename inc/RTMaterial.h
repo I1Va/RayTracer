@@ -18,6 +18,7 @@ struct RTMaterial {
     ) const = 0;
 
     virtual GmVec<double,3> emitted() const { return {0.0, 0.0, 0.0}; }
+    virtual GmVec<double,3> albedo() const { return {0.0, 0.0, 0.0}; }
 };
 
 class RTLambertian : public RTMaterial {
@@ -41,14 +42,16 @@ public:
         attenuation = albedo_;
         return true;
     }
+
+    GmVec<double,3> albedo() const override { return albedo_; }
 };
 
 class RTMetal : public RTMaterial {
-    GmVec<double,3> albedo_; 
+    GmVec<double,3> specularColor_; 
     double fuzz_;
 
 public:
-    RTMetal(const RTColor& albedo, double fuzz) : albedo_(albedo), fuzz_(fuzz < 1 ? fuzz : 1) {}
+    RTMetal(const RTColor& specularColor, double fuzz) : specularColor_(specularColor), fuzz_(fuzz < 1 ? fuzz : 1) {}
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
@@ -58,23 +61,26 @@ public:
         GmVec<double,3> reflected = reflect(inRay.direction, hitRecord.normal);
         reflected = reflected.normalized() + randomUnitVector() * fuzz_;
         scattered = Ray(hitRecord.point, reflected);
-        attenuation = albedo_;
+        attenuation = specularColor_;
         return true;
     }
+
+    GmVec<double,3> albedo() const override { return {0.0, 0.0, 0.0}; }
 };
 
 class RTDielectric : public RTMaterial {
+    GmVec<double, 3> albedo_;
     double refractionIndex_;
-
+    
 public:
-    RTDielectric(double refractionIndex) : refractionIndex_(refractionIndex) {}
+    RTDielectric(const GmVec<double, 3> albedo, const double refractionIndex) : albedo_(albedo), refractionIndex_(refractionIndex) {}
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
                 GmVec<double,3> &attenuation,
                 Ray& scattered) const override
     {
-        attenuation = RTColor(1.0, 1.0, 1.0);
+        attenuation = albedo_;
 
         double eta = hitRecord.frontFace ? (1.0 / refractionIndex_) : refractionIndex_;
 
@@ -98,6 +104,8 @@ public:
         scattered = Ray(newOrigin, direction.normalized());
         return true;
     }
+
+    GmVec<double,3> albedo() const override { return albedo_; }
 
 private:
     static double reflectance(double cosine, double refractionIndex) {   
