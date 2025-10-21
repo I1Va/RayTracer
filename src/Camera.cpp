@@ -1,8 +1,8 @@
 #include <iostream>
+#include <omp.h>
 
 #include "Camera.h"
 #include "RayTracer.h"
-
 #include "Output.h"
 
 
@@ -40,9 +40,12 @@ Camera::Camera
 (
     const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution
 ): 
-    center_(center), direction_(direction.normalized()), screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
+    center_(center), direction_(direction.normalized()), 
+    screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
 {   
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
+    samplesPerScatter_ = 1.0 / samplesPerScatter_;
+
     GmVec<double,3> worldUp(0.0, 0.0, 1.0);
     if (std::abs(dot(direction_, worldUp)) > 0.999)
         worldUp = GmVec<double,3>(0.0, 1.0, 0.0);
@@ -76,27 +79,45 @@ GmVec<double, 3> Camera::computeDirectLighting(const HitRecord &rec, const Scene
     return summaryLighting;
 }
 
-RTColor Camera::getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const {
+
+
+
+RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
 
     HitRecord rec = {};
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
-        Ray scattered = {};
-        RTColor attenuation = {};
-    
         GmVec<double, 3> emitted = rec.material->emitted();
-        GmVec<double, 3> Ldirect = computeDirectLighting(rec, sceneManager);
-        
-        if (rec.material->scatter(ray, rec, attenuation, scattered)) {
-            GmVec<double, 3> LIndirect = attenuation * getRayColor(scattered, depth-1, sceneManager);
+        GmVec<double, 3> Ldirect = (enableLDirect_ ? computeDirectLighting(rec, sceneManager) : GmVec<double, 3>{0, 0, 0});
+        GmVec<double, 3> LIndirect = {0, 0, 0};
+        if (getMultipleScatterLInderect(ray, rec, depth, sceneManager, LIndirect))
             return emitted + Ldirect + LIndirect;
-        }
         return emitted + Ldirect;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
     return RTColor(1.0, 1.0, 1.0) * (1.0-a) + RTColor(0.5, 0.7, 1.0) * a;   
+}
+
+bool Camera::getMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+                                         const int depth, const SceneManager& sceneManager,
+                                         GmVec<double, 3> &LIndirect) const
+{
+    bool scatteredState = false;
+    LIndirect = {0, 0, 0};
+    for (int i = 0; i < samplesPerScatter_; i++) {
+        Ray scattered = {};
+        RTColor attenuation = {};
+        
+        if (hitRecord.material->scatter(ray, hitRecord, attenuation, scattered)) {
+            LIndirect += attenuation * getRayColor(scattered, depth-1, sceneManager);
+            scatteredState = true;
+        }
+    }
+    LIndirect = LIndirect * sampleScatterScale_;
+
+    return scatteredState;
 }
 
 Ray Camera::genRay(int pixelX, int pixelY) {
@@ -112,19 +133,38 @@ Ray Camera::genRay(int pixelX, int pixelY) {
     return Ray(center_, rayDirection.normalized());
 }
 
+// void Camera::render(const SceneManager& sceneManager) {
+//     for (int pixelX = 0; pixelX < screenResolution_.first; pixelX++) {
+//         for (int pixelY = 0; pixelY < screenResolution_.second; pixelY++) {
+//             RTColor sampleSumColor = RTColor(0,0,0);
+//             for (int sample = 0; sample < samplesPerPixel_; sample++) {
+//                 Ray ray = genRay(pixelX, pixelY);
+//                 RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
+
+//                 sampleSumColor += rayColor;
+//             }   
+//             setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
+//         }
+//     }
+// }
+
+
 void Camera::render(const SceneManager& sceneManager) {
-    for (int pixelX = 0; pixelX < screenResolution_.first; pixelX++) {
-        for (int pixelY = 0; pixelY < screenResolution_.second; pixelY++) {
-            RTColor sampleSumColor = RTColor(0,0,0);
-            for (int sample = 0; sample < samplesPerPixel_; sample++) {
-                Ray ray = genRay(pixelX, pixelY);
-                RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
-                
-                
-                sampleSumColor += rayColor;
-            }   
-            setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
-        }
+    std::cout << "OMP render\n";
+    #pragma omp parallel for schedule(dynamic,64)
+    for (int pixelId = 0; pixelId < screenResolution_.first * screenResolution_.second; pixelId++) {
+        int pixelX = pixelId % screenResolution_.first;
+        int pixelY = pixelId / screenResolution_.first;
+        std::mt19937 rng(1234 + omp_get_thread_num());
+
+        RTColor sampleSumColor = RTColor(0,0,0);
+        for (int sample = 0; sample < samplesPerPixel_; sample++) {
+            Ray ray = genRay(pixelX, pixelY);
+            RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
+
+            sampleSumColor += rayColor;
+        }   
+        setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
     }
 }
 
@@ -144,5 +184,13 @@ void Camera::setSamplesPerPixel(int newVal) {
     samplesPerPixel_ = newVal;
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
 }
+
+void Camera::setSamplesPerScatter(int newVal) {
+    samplesPerScatter_ = newVal;
+    sampleScatterScale_ = 1.0 / samplesPerScatter_; 
+}
+
+void Camera::disableLDirect() { enableLDirect_ = false; }
+void Camera::enableLDirect() { enableLDirect_ = true; }
 
 void Camera::setMaxRayDepth(int newVal) { maxRayDepth_ = newVal; }

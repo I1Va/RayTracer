@@ -7,8 +7,11 @@
 #include "RTObjects.h"
 class SceneManager;
 
-const int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
-const int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
+inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
+inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_SCATTER = 3;
+inline constexpr int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
+inline constexpr bool DEFAULT_CAMERA_ENABLE_LIDERECT = true;
+
 
 struct RTPixelColor {
     uint8_t r, g, b, a;
@@ -34,9 +37,13 @@ class Camera {
     std::vector<RTPixelColor> pixels_ = {};
 
     double pixelSamplesScale_ = 0;
+    double sampleScatterScale_ = 0;
 
-    int samplesPerPixel_ = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
-    int maxRayDepth_ = DEFAULT_CAMERA_MAX_RAY_DEPTH;
+    int samplesPerPixel_    = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
+    int samplesPerScatter_  = DEFAULT_CAMERA_SAMPLES_PER_SCATTER;
+    int maxRayDepth_        = DEFAULT_CAMERA_MAX_RAY_DEPTH;
+
+    bool enableLDirect_     = true;
 
 public:
     Camera();
@@ -48,7 +55,11 @@ public:
 
     GmVec<double, 3> computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const;
 
-    RTColor getRayColor(const Ray& ray, int depth, const SceneManager& sceneManager) const;
+    RTColor getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const;
+
+    bool getMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+                                     const int depth, const SceneManager& sceneManager,
+                                     GmVec<double, 3> &LIndirect) const;
 
     Ray genRay(int pixelX, int pixelY);
 
@@ -63,7 +74,10 @@ public:
     const std::vector<RTPixelColor> pixels() const;
 
     void setSamplesPerPixel(int newVal);
+    void setSamplesPerScatter(int newVal);
     void setMaxRayDepth(int newVal);
+    void disableLDirect();
+    void enableLDirect();
 };
 
 
