@@ -29,9 +29,11 @@ struct Viewport {
 class Camera {
     static constexpr const double FOCAL_LENGTH = 1;
 
-    GmPoint<double, 3> center_ = {};
-    GmVec<double, 3> direction_ = {};
-    Viewport viewPort_ = {};
+    GmPoint<double, 3> center_    = {};
+    GmVec<double, 3>   direction_ = {};
+
+    Viewport         viewPort_  = {};
+    GmVec<double, 2> viewAngle_ = {};
 
     std::pair<int, int> screenResolution_ = {};
     std::vector<RTPixelColor> pixels_ = {};
@@ -56,6 +58,11 @@ public:
         const GmPoint<double, 3> &center, const GmVec<double, 3> &direction, const std::pair<int, int> &screenResolution
     );
 
+
+    void setDirection(const GmVec<double, 3> &direction);
+    void rotate(const double widthRadians, const double heightRadians);
+
+
     GmVec<double, 3> computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const;
 
     RTColor getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const;
@@ -69,6 +76,7 @@ public:
     void render(const SceneManager& sceneManager);
 
     const std::pair<int, int> &screenResolution() const;
+    GmVec<double, 2> viewAngle() const;
 
     void setPixel(const int pixelX, const int pixelY, const RTPixelColor color);
 

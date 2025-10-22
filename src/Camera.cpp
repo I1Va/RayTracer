@@ -45,6 +45,14 @@ Camera::Camera
 {   
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
     samplesPerScatter_ = 1.0 / samplesPerScatter_;
+    setDirection(direction);
+
+    viewAngle_.setX(2 * std::atan(viewPort_.VIEWPORT_HEIGHT / FOCAL_LENGTH));
+    viewAngle_.setY(2 * std::atan(viewPort_.VIEWPORT_WIDTH / FOCAL_LENGTH));
+};
+
+void Camera::setDirection(const GmVec<double, 3> &direction) {
+    direction_ = direction.normalized();
 
     GmVec<double,3> worldUp(0.0, 0.0, 1.0);
     if (std::abs(dot(direction_, worldUp)) > 0.999)
@@ -57,10 +65,14 @@ Camera::Camera
     GmVec<double,3> downFull    = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
 
     viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - rightFull* 0.5 - downFull * 0.5; 
-};
+}
 
-
-
+void Camera::rotate(const double widthRadians, const double heightRadians) {
+    GmVec<double, 3> newDirection = direction_;
+    newDirection.rotate(viewPort_.downDir_, -widthRadians);
+    newDirection.rotate(viewPort_.rightDir_, heightRadians);
+    setDirection(newDirection);
+}
 
 GmVec<double, 3> Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const {
     GmVec<double, 3> summaryLighting = {0, 0, 0};
@@ -78,9 +90,6 @@ GmVec<double, 3> Camera::computeDirectLighting(const HitRecord &rec, const Scene
 
     return summaryLighting;
 }
-
-
-
 
 RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
@@ -161,6 +170,7 @@ void Camera::render(const SceneManager& sceneManager) {
 }
 
 const std::pair<int, int> &Camera::screenResolution() const { return screenResolution_; }
+GmVec<double, 2> Camera::viewAngle() const { return viewAngle_; }
 
 void Camera::setPixel(const int pixelX, const int pixelY, const RTPixelColor color) {
     pixels_[pixelX * screenResolution_.second + pixelY] = color;
