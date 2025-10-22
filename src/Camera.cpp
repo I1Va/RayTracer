@@ -133,38 +133,30 @@ Ray Camera::genRay(int pixelX, int pixelY) {
     return Ray(center_, rayDirection.normalized());
 }
 
-// void Camera::render(const SceneManager& sceneManager) {
-//     for (int pixelX = 0; pixelX < screenResolution_.first; pixelX++) {
-//         for (int pixelY = 0; pixelY < screenResolution_.second; pixelY++) {
-//             RTColor sampleSumColor = RTColor(0,0,0);
-//             for (int sample = 0; sample < samplesPerPixel_; sample++) {
-//                 Ray ray = genRay(pixelX, pixelY);
-//                 RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
+void Camera::renderSamplesPerPixel(const int pixelId, const SceneManager& sceneManager) {
+    int pixelX = pixelId % screenResolution_.first;
+    int pixelY = pixelId / screenResolution_.first;
 
-//                 sampleSumColor += rayColor;
-//             }   
-//             setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
-//         }
-//     }
-// }
+    RTColor sampleSumColor = RTColor(0,0,0);
+    for (int sample = 0; sample < samplesPerPixel_; sample++) {
+        Ray ray = genRay(pixelX, pixelY);
+        RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
 
+        sampleSumColor += rayColor;
+    }   
+    setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
+}
 
 void Camera::render(const SceneManager& sceneManager) {
-    std::cout << "OMP render\n";
-    #pragma omp parallel for schedule(dynamic,64)
-    for (int pixelId = 0; pixelId < screenResolution_.first * screenResolution_.second; pixelId++) {
-        int pixelX = pixelId % screenResolution_.first;
-        int pixelY = pixelId / screenResolution_.first;
+    int pixelCount = screenResolution_.first * screenResolution_.second;
+
+    #pragma omp parallel
+    {
         std::mt19937 rng(1234 + omp_get_thread_num());
-
-        RTColor sampleSumColor = RTColor(0,0,0);
-        for (int sample = 0; sample < samplesPerPixel_; sample++) {
-            Ray ray = genRay(pixelX, pixelY);
-            RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
-
-            sampleSumColor += rayColor;
-        }   
-        setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
+        #pragma omp for schedule(dynamic,threadPixelbunchSize_)
+        for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
+            renderSamplesPerPixel(pixelId, sceneManager);
+        }
     }
 }
 
@@ -188,6 +180,9 @@ void Camera::setSamplesPerPixel(int newVal) {
 void Camera::setSamplesPerScatter(int newVal) {
     samplesPerScatter_ = newVal;
     sampleScatterScale_ = 1.0 / samplesPerScatter_; 
+}
+void Camera::setThreadPixelbunchSize(const int newVal) {
+    threadPixelbunchSize_ = newVal;
 }
 
 void Camera::disableLDirect() { enableLDirect_ = false; }

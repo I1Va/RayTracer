@@ -11,7 +11,7 @@ inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
 inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_SCATTER = 3;
 inline constexpr int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
 inline constexpr bool DEFAULT_CAMERA_ENABLE_LIDERECT = true;
-
+inline constexpr size_t DEFAULT_THREAD_PIXELBUNCH_SIZE = 64;
 
 struct RTPixelColor {
     uint8_t r, g, b, a;
@@ -39,9 +39,12 @@ class Camera {
     double pixelSamplesScale_ = 0;
     double sampleScatterScale_ = 0;
 
-    int samplesPerPixel_    = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
-    int samplesPerScatter_  = DEFAULT_CAMERA_SAMPLES_PER_SCATTER;
-    int maxRayDepth_        = DEFAULT_CAMERA_MAX_RAY_DEPTH;
+    int samplesPerPixel_        = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
+    int samplesPerScatter_      = DEFAULT_CAMERA_SAMPLES_PER_SCATTER;
+    int maxRayDepth_            = DEFAULT_CAMERA_MAX_RAY_DEPTH;
+
+    int threadPixelbunchSize_   = DEFAULT_THREAD_PIXELBUNCH_SIZE;
+
 
     bool enableLDirect_     = true;
 
@@ -73,11 +76,15 @@ public:
 
     const std::vector<RTPixelColor> pixels() const;
 
-    void setSamplesPerPixel(int newVal);
-    void setSamplesPerScatter(int newVal);
-    void setMaxRayDepth(int newVal);
+    void setSamplesPerPixel(const int newVal);
+    void setSamplesPerScatter(const int newVal);
+    void setMaxRayDepth(const int newVal);
+    void setThreadPixelbunchSize(const int newVal);
     void disableLDirect();
     void enableLDirect();
+
+private:
+    void renderSamplesPerPixel(const int pixelId, const SceneManager& sceneManager);
 };
 
 
