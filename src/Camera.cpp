@@ -45,15 +45,13 @@ Camera::Camera
 {   
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
     samplesPerScatter_ = 1.0 / samplesPerScatter_;
-    setDirection(direction);
 
     viewAngle_.setX(2 * std::atan(viewPort_.VIEWPORT_HEIGHT / FOCAL_LENGTH));
     viewAngle_.setY(2 * std::atan(viewPort_.VIEWPORT_WIDTH / FOCAL_LENGTH));
+    updateViewPort();
 };
 
-void Camera::setDirection(const GmVec<double, 3> &direction) {
-    direction_ = direction.normalized();
-
+void Camera::updateViewPort() {
     GmVec<double,3> worldUp(0.0, 0.0, 1.0);
     if (std::abs(dot(direction_, worldUp)) > 0.999)
         worldUp = GmVec<double,3>(0.0, 1.0, 0.0);
@@ -67,11 +65,15 @@ void Camera::setDirection(const GmVec<double, 3> &direction) {
     viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - rightFull* 0.5 - downFull * 0.5; 
 }
 
+void Camera::move(const GmVec<double, 3> motionVec) {
+    center_ = center_ + motionVec;
+    updateViewPort();
+}
+
 void Camera::rotate(const double widthRadians, const double heightRadians) {
-    GmVec<double, 3> newDirection = direction_;
-    newDirection.rotate(viewPort_.downDir_, -widthRadians);
-    newDirection.rotate(viewPort_.rightDir_, heightRadians);
-    setDirection(newDirection);
+    direction_.rotate(viewPort_.downDir_, -widthRadians);
+    direction_.rotate(viewPort_.rightDir_, heightRadians);
+    updateViewPort();
 }
 
 GmVec<double, 3> Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const {
@@ -171,22 +173,22 @@ void Camera::render(const SceneManager& sceneManager) {
 
 const std::pair<int, int> &Camera::screenResolution() const { return screenResolution_; }
 GmVec<double, 2> Camera::viewAngle() const { return viewAngle_; }
-
+const Viewport &Camera::viewPort() const { return viewPort_; }
 void Camera::setPixel(const int pixelX, const int pixelY, const RTPixelColor color) {
     pixels_[pixelX * screenResolution_.second + pixelY] = color;
 }
 
+
+GmVec<double, 3> Camera::direction() const { return direction_; }
 RTPixelColor Camera::getPixel(const int pixelX, const int pixelY) const {
     return pixels_[pixelX * screenResolution_.second + pixelY];
 }
-
 const std::vector<RTPixelColor> Camera::pixels() const { return pixels_; }
 
 void Camera::setSamplesPerPixel(int newVal) {
     samplesPerPixel_ = newVal;
     pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
 }
-
 void Camera::setSamplesPerScatter(int newVal) {
     samplesPerScatter_ = newVal;
     sampleScatterScale_ = 1.0 / samplesPerScatter_; 
@@ -194,8 +196,6 @@ void Camera::setSamplesPerScatter(int newVal) {
 void Camera::setThreadPixelbunchSize(const int newVal) {
     threadPixelbunchSize_ = newVal;
 }
-
 void Camera::disableLDirect() { enableLDirect_ = false; }
 void Camera::enableLDirect() { enableLDirect_ = true; }
-
 void Camera::setMaxRayDepth(int newVal) { maxRayDepth_ = newVal; }

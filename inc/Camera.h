@@ -59,8 +59,9 @@ public:
     );
 
 
-    void setDirection(const GmVec<double, 3> &direction);
+    void updateViewPort();
     void rotate(const double widthRadians, const double heightRadians);
+    void move(const GmVec<double, 3> motionVec);
 
 
     GmVec<double, 3> computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const;
@@ -81,8 +82,9 @@ public:
     void setPixel(const int pixelX, const int pixelY, const RTPixelColor color);
 
     RTPixelColor getPixel(const int pixelX, const int pixelY) const;
-
+    const Viewport &viewPort() const;
     const std::vector<RTPixelColor> pixels() const;
+    GmVec<double, 3> direction() const;
 
     void setSamplesPerPixel(const int newVal);
     void setSamplesPerScatter(const int newVal);
