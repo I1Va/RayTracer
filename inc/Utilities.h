@@ -2,9 +2,11 @@
 #define UTILITIES_H
 
 #include "Geom.h"
+#include "IntinsicGeom.h"
 
-inline GmVec<double, 3> randomUnitVector() {
-    return GmVec<double, 3>::random().normalized();
+inline gm::IVec3 randomUnitVector() {
+    return gm::IVec3::random().normalized();
 
 }
+
 #endif // UTILITIES_H

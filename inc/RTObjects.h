@@ -12,7 +12,7 @@ class SceneManager;
 struct Primitives {
     const RTMaterial *material_;
     const SceneManager *parent_;
-    GmPoint<double, 3> position_; 
+    gm::IPoint3 position_; 
 
     Primitives(const RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
         assert(material);
@@ -31,7 +31,7 @@ public:
     SphereObject(double radius, const RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
-        GmVec<double,3> oc = ray.origin - position_; 
+        gm::IVec3 oc = ray.origin - position_; 
         double a = dot(ray.direction, ray.direction);         
         double half_b = dot(oc, ray.direction);              
         double c = dot(oc, oc) - radius_ * radius_;
@@ -50,7 +50,7 @@ public:
         rec.time = root;
         rec.point = ray.origin + ray.direction * root;
 
-        GmVec<double,3> outwardNormal = (rec.point - position_) / radius_; 
+        gm::IVec3 outwardNormal = (rec.point - position_) / radius_; 
         rec.setFaceNormal(ray, outwardNormal);
         rec.material = material_;
         return true;
@@ -58,13 +58,13 @@ public:
 };
 
 class PlaneObject : public Primitives {
-    GmPoint<double, 3> point_;
-    GmVec<double, 3> normal_;
+    gm::IPoint3 point_;
+    gm::IVec3 normal_;
 
 public:
     PlaneObject
     (
-        const GmPoint<double, 3> point, GmVec<double, 3> normal,
+        const gm::IPoint3 point, gm::IVec3 normal,
         const RTMaterial *material, const SceneManager *parent=nullptr
     ):
         Primitives(material, parent), point_(point), normal_(normal.normalized()) {}
@@ -78,7 +78,7 @@ public:
         hitRecord.time = time;
         hitRecord.point = ray.origin + ray.direction * time;
         
-        GmVec<double, 3> outwardNormal = normal_;
+        gm::IVec3 outwardNormal = normal_;
         if (dot(normal_, ray.direction) < 0) outwardNormal = normal_ * (-1);  
 
         hitRecord.setFaceNormal(ray, outwardNormal);
@@ -91,10 +91,10 @@ public:
 
 
 class Light {
-    GmVec<double, 3> ambientIntensity_;
-    GmVec<double, 3> defuseIntensity_;
-    GmVec<double, 3> specularIntensity_;
-    GmPoint<double, 3> center_;
+    gm::IVec3 ambientIntensity_;
+    gm::IVec3 defuseIntensity_;
+    gm::IVec3 specularIntensity_;
+    gm::IPoint3 center_;
     double viewLightPow_;
 
     const SceneManager *parent_;
@@ -102,9 +102,9 @@ class Light {
 public:
     Light
     (
-        const GmVec<double, 3> ambientIntensity,
-        const GmVec<double, 3> defuseIntensity,
-        const GmVec<double, 3> specularIntensity,
+        const gm::IVec3 ambientIntensity,
+        const gm::IVec3 defuseIntensity,
+        const gm::IVec3 specularIntensity,
         double viewLightPow,
         const SceneManager *parent=nullptr
     ) : 
@@ -114,49 +114,49 @@ public:
     viewLightPow_(viewLightPow),
     parent_(parent) {}
 
-    virtual RTColor getDirectLighting(const GmPoint<double, 3> onSurfPoint, const GmVec<double, 3> surfNormal,
-                                      const GmVec<double, 3> toView, const RTMaterial *surfMaterial) 
+    virtual RTColor getDirectLighting(const gm::IPoint3 onSurfPoint, const gm::IVec3 surfNormal,
+                                      const gm::IVec3 toView, const RTMaterial *surfMaterial) 
     {
         assert(surfMaterial);
 
-        GmVec<double, 3> ambientIntensity = ambientIntensity_ * surfMaterial->albedo();
+        gm::IVec3 ambientIntensity = ambientIntensity_ * surfMaterial->albedo();
 
-        GmVec<double, 3> toLight = center_ - onSurfPoint;
+        gm::IVec3 toLight = center_ - onSurfPoint;
     
-        GmVec<double, 3> defuseIntensity = defuseLightIntensity(toLight, surfNormal) * surfMaterial->albedo();
+        gm::IVec3 defuseIntensity = defuseLightIntensity(toLight, surfNormal) * surfMaterial->albedo();
 
-        GmVec<double, 3> specularIntensity = specularLightIntesity(toLight, toView, surfNormal);
+        gm::IVec3 specularIntensity = specularLightIntesity(toLight, toView, surfNormal);
 
         return ambientIntensity + defuseIntensity + specularIntensity;
     }
 
-    GmPoint<double, 3> center() const { return center_; }
+    gm::IPoint3 center() const { return center_; }
     const SceneManager *parent() const { return parent_; }
     void setParent(const SceneManager *parent) { parent_ = parent; }
-    void setPosition(const GmPoint<double, 3> center) { center_ = center; }
+    void setPosition(const gm::IPoint3 center) { center_ = center; }
 
 private:
     // Lambert
-    GmVec<double, 3> defuseLightIntensity(const GmVec<double, 3> toLight, const GmVec<double, 3> surfNormal) {
+    gm::IVec3 defuseLightIntensity(const gm::IVec3 toLight, const gm::IVec3 surfNormal) {
         double lightRefAngleCos = dot(toLight.normalized(), surfNormal.normalized());
 
         if (lightRefAngleCos > 0)
             return defuseIntensity_ * lightRefAngleCos;
-        return GmVec<double, 3>(0.0, 0.0, 0.0);
+        return gm::IVec3(0.0, 0.0, 0.0);
     }
 
     // Phong
-    GmVec<double, 3> specularLightIntesity(const GmVec<double, 3> toLight, const GmVec<double, 3> toView, const GmVec<double, 3> surfNormal) {
-        GmVec<double, 3> surfToReflLight = toLight - getOrtogonal(toLight, surfNormal) * 2;
+    gm::IVec3 specularLightIntesity(const gm::IVec3 toLight, const gm::IVec3 toView, const gm::IVec3 surfNormal) {
+        gm::IVec3 surfToReflLight = toLight - getOrtogonal(toLight, surfNormal) * 2;
         
         double view_angle_cos = dot(surfToReflLight.normalized(), toView.normalized());
         
         if (view_angle_cos > 0) {
             double resCoef = std::pow(view_angle_cos, viewLightPow_);
-            return GmVec<double, 3>(resCoef); 
+            return gm::IVec3(resCoef); 
         }
 
-        return GmVec<double, 3>(0, 0, 0);        
+        return gm::IVec3(0, 0, 0);        
     }
 };
 

@@ -14,8 +14,8 @@ public:
 
     ~SceneManager();
 
-    void addObject(const GmPoint<double, 3> position, Primitives *object);
-    void addLight(const GmPoint<double, 3> position, Light *light);
+    void addObject(const gm::IPoint3 position, Primitives *object);
+    void addLight(const gm::IPoint3 position, Light *light);
 
     bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const;
 

@@ -14,7 +14,7 @@ const std::vector<Light *> &SceneManager::inderectLightSources() const {
     return inderectLightSources_;
 }
 
-void SceneManager::addObject(const GmPoint<double, 3> position, Primitives *object) {
+void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
     assert(object);
 
     if (object->parent_ != this && object->parent_ != nullptr) 
@@ -25,7 +25,7 @@ void SceneManager::addObject(const GmPoint<double, 3> position, Primitives *obje
     Primitivess_.push_back(object);
 }
 
-void SceneManager::addLight(const GmPoint<double, 3> position, Light *object) {
+void SceneManager::addLight(gm::IPoint3 position, Light *object) {
     assert(object);
 
     if (object->parent() != this && object->parent() != nullptr) 

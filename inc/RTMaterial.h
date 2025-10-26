@@ -4,7 +4,7 @@
 
 #include "RTGeometry.h"
 #include "Utilities.h"
-using RTColor = GmVec<double, 3>;
+using RTColor = gm::IVec3;
 
 
 struct RTMaterial {
@@ -13,27 +13,27 @@ struct RTMaterial {
     virtual bool scatter(
         const Ray& inRay,
         const HitRecord &hitRecord,
-        GmVec<double,3> &attenuation,
+        gm::IVec3 &attenuation,
         Ray& scattered
     ) const = 0;
 
-    virtual GmVec<double,3> emitted() const { return {0.0, 0.0, 0.0}; }
-    virtual GmVec<double,3> albedo() const { return {0.0, 0.0, 0.0}; }
+    virtual gm::IVec3 emitted() const { return {0.0, 0.0, 0.0}; }
+    virtual gm::IVec3 albedo() const { return {0.0, 0.0, 0.0}; }
 };
 
 class RTLambertian : public RTMaterial {
-    GmVec<double,3> albedo_; 
+    gm::IVec3 albedo_; 
 
 public:
-    explicit RTLambertian(const GmVec<double,3>& albedo)
+    explicit RTLambertian(const gm::IVec3& albedo)
         : albedo_(albedo) {}
 
     bool scatter(const Ray& inRay,
                  const HitRecord &hitRecord,
-                 GmVec<double,3> &attenuation,
+                 gm::IVec3 &attenuation,
                  Ray& scattered) const override
     {
-        GmVec<double,3> scatterDir = hitRecord.normal + randomUnitVector();
+        gm::IVec3 scatterDir = hitRecord.normal + randomUnitVector();
 
         if (scatterDir.nearZero())
             scatterDir = hitRecord.normal;
@@ -43,11 +43,11 @@ public:
         return true;
     }
 
-    GmVec<double,3> albedo() const override { return albedo_; }
+    gm::IVec3 albedo() const override { return albedo_; }
 };
 
 class RTMetal : public RTMaterial {
-    GmVec<double,3> specularColor_; 
+    gm::IVec3 specularColor_; 
     double fuzz_;
 
 public:
@@ -55,57 +55,57 @@ public:
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
-                GmVec<double,3> &attenuation,
+                gm::IVec3 &attenuation,
                 Ray& scattered) const override
     {
-        GmVec<double,3> reflected = reflect(inRay.direction, hitRecord.normal);
+        gm::IVec3 reflected = reflect(inRay.direction, hitRecord.normal);
         reflected = reflected.normalized() + randomUnitVector() * fuzz_;
         scattered = Ray(hitRecord.point, reflected);
         attenuation = specularColor_;
         return true;
     }
 
-    GmVec<double,3> albedo() const override { return {0.0, 0.0, 0.0}; }
+    gm::IVec3 albedo() const override { return {0.0, 0.0, 0.0}; }
 };
 
 class RTDielectric : public RTMaterial {
-    GmVec<double, 3> albedo_;
+    gm::IVec3 albedo_;
     double refractionIndex_;
     
 public:
-    RTDielectric(const GmVec<double, 3> albedo, const double refractionIndex) : albedo_(albedo), refractionIndex_(refractionIndex) {}
+    RTDielectric(const gm::IVec3 albedo, const double refractionIndex) : albedo_(albedo), refractionIndex_(refractionIndex) {}
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
-                GmVec<double,3> &attenuation,
+                gm::IVec3 &attenuation,
                 Ray& scattered) const override
     {
         attenuation = albedo_;
 
         double eta = hitRecord.frontFace ? (1.0 / refractionIndex_) : refractionIndex_;
 
-        GmVec<double,3> unitDir = inRay.direction.normalized();
+        gm::IVec3 unitDir = inRay.direction.normalized();
         double cosTheta = std::fmin(dot(unitDir * (-1), hitRecord.normal), 1.0);
         double sinTheta = std::sqrt(std::max(0.0, 1.0 - cosTheta * cosTheta));
 
         bool cannotRefract = eta * sinTheta > 1.0;
 
-        GmVec<double,3> direction;
-        if (cannotRefract || reflectance(cosTheta, eta) > randomDouble()) {
+        gm::IVec3 direction;
+        if (cannotRefract || reflectance(cosTheta, eta) > gm::randomDouble()) {
             direction = reflect(unitDir, hitRecord.normal);
         } else {
-            GmVec<double,3> refr;
+            gm::IVec3 refr;
             direction = refract(unitDir, hitRecord.normal, eta).normalized();
         }
 
         constexpr double ORIGIN_EPS = 1e-4;
-        GmPoint<double,3> newOrigin = hitRecord.point + hitRecord.normal * (hitRecord.frontFace ? ORIGIN_EPS : -ORIGIN_EPS);
+        gm::IPoint3 newOrigin = hitRecord.point + hitRecord.normal * (hitRecord.frontFace ? ORIGIN_EPS : -ORIGIN_EPS);
 
         scattered = Ray(newOrigin, direction.normalized());
         return true;
     }
 
-    GmVec<double,3> albedo() const override { return albedo_; }
+    gm::IVec3 albedo() const override { return albedo_; }
 
 private:
     static double reflectance(double cosine, double refractionIndex) {   
@@ -116,16 +116,16 @@ private:
 };
 
 class RTEmissive : public RTMaterial {
-    GmVec<double,3> emission_;
+    gm::IVec3 emission_;
 public:
-    explicit RTEmissive(const GmVec<double,3>& emission)
+    explicit RTEmissive(const gm::IVec3& emission)
         : emission_(emission) {}
 
-    bool scatter(const Ray&, const HitRecord&, GmVec<double,3>&, Ray&) const override {
+    bool scatter(const Ray&, const HitRecord&, gm::IVec3&, Ray&) const override {
         return false;
     }
 
-    GmVec<double,3> emitted() const override {
+    gm::IVec3 emitted() const override {
         return emission_;
     }
 };
