@@ -136,7 +136,7 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
         gm::IVec3f emitted = rec.material->emitted();
 
         gm::IVec3f LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
-        gm::IVec3f LDirect = {0, 0, 0}; // computeDirectLighting(rec, sceneManager);
+        gm::IVec3f LDirect   = (enableLDirect_ ? computeDirectLighting(rec, sceneManager) : gm::IVec3f{0, 0, 0});
         
         return emitted + LIndirect + LDirect;
     }
