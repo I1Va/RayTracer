@@ -134,14 +134,11 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
         gm::IVec3 emitted = rec.material->emitted();
-    
 
-        gm::IVec3 Lighting = (enableRayTracerMode_ ? 
-            computeMultipleScatterLInderect(ray, rec, depth, sceneManager) :
-            computeDirectLighting(rec, sceneManager)
-        );
-
-        return emitted + Lighting;
+        gm::IVec3 LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
+        gm::IVec3 LDirect = computeDirectLighting(rec, sceneManager);
+        
+        return emitted + LIndirect + LDirect;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
@@ -159,12 +156,12 @@ gm::IVec3 Camera::computeDirectLighting(const HitRecord &rec, const SceneManager
 
     gm::IVec3 toView = center_ - rec.point;
     for (Light *lightSrc : sceneManager.inderectLightSources()) {
-        HitRecord tmp;
         Ray toLightRay = Ray(rec.point, lightSrc->center() - rec.point);
-        if (sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp))
-            continue;
     
-        summaryLighting += lightSrc->getDirectLighting(rec.point, rec.normal, toView, rec.material);    
+        HitRecord tmp;
+        bool hitted = sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp);
+    
+        summaryLighting += lightSrc->getDirectLighting(toView, rec, hitted);    
     }
 
     return summaryLighting;

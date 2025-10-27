@@ -114,20 +114,16 @@ public:
     viewLightPow_(viewLightPow),
     parent_(parent) {}
 
-    virtual RTColor getDirectLighting(const gm::IPoint3 onSurfPoint, const gm::IVec3 surfNormal,
-                                      const gm::IVec3 toView, const RTMaterial *surfMaterial) 
+    virtual RTColor getDirectLighting(const gm::IVec3 toView, const HitRecord &rec, bool hitted) 
     {
-        assert(surfMaterial);
+        gm::IVec3 toLight = (center_ - rec.point).normalized();
+        
+        gm::IVec3 ambientIntensity  = ambientIntensity_ * rec.material->diffuse();
+        gm::IVec3 defuseIntensity   = defuseLightIntensity(toLight, rec.normal) * rec.material->diffuse();
+        gm::IVec3 specularIntensity = specularLightIntesity(toLight, toView.normalized(), rec.normal);
+        double    shadowFactor      = (hitted ? 0.0 : 1.0);
 
-        gm::IVec3 ambientIntensity = ambientIntensity_ * surfMaterial->albedo();
-
-        gm::IVec3 toLight = center_ - onSurfPoint;
-    
-        gm::IVec3 defuseIntensity = defuseLightIntensity(toLight, surfNormal) * surfMaterial->albedo();
-
-        gm::IVec3 specularIntensity = specularLightIntesity(toLight, toView, surfNormal);
-
-        return ambientIntensity + defuseIntensity + specularIntensity;
+        return ambientIntensity + (defuseIntensity + specularIntensity) * shadowFactor;
     }
 
     gm::IPoint3 center() const { return center_; }

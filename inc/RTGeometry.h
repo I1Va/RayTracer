@@ -54,7 +54,7 @@ struct HitRecord {
 
     void setFaceNormal(const Ray& ray, const gm::IVec3& outwardNormal) {
         frontFace = dot(ray.direction, outwardNormal) < 0;
-        normal = frontFace ? outwardNormal : outwardNormal * (-1);
+        normal = frontFace ? outwardNormal.normalized() : outwardNormal.normalized() * (-1);
     }
 };
 

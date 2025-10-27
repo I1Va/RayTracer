@@ -17,16 +17,21 @@ struct RTMaterial {
         Ray& scattered
     ) const = 0;
 
+    virtual bool hasSpecular() const { return false; }
+    virtual bool hasDiffuse() const { return false; }
+    virtual bool hasEmmision() const { return false; }
+    
     virtual gm::IVec3 emitted() const { return {0.0, 0.0, 0.0}; }
-    virtual gm::IVec3 albedo() const { return {0.0, 0.0, 0.0}; }
+    virtual gm::IVec3 diffuse() const { return {0.0, 0.0, 0.0}; }
+    virtual gm::IVec3 specular() const { return {0.0, 0.0, 0.0}; }
 };
 
 class RTLambertian : public RTMaterial {
-    gm::IVec3 albedo_; 
+    gm::IVec3 diffuse_;
 
 public:
-    explicit RTLambertian(const gm::IVec3& albedo)
-        : albedo_(albedo) {}
+    explicit RTLambertian(const gm::IVec3& diffuse)
+        : diffuse_(diffuse) {}
 
     bool scatter(const Ray& inRay,
                  const HitRecord &hitRecord,
@@ -39,11 +44,12 @@ public:
             scatterDir = hitRecord.normal;
 
         scattered = Ray(hitRecord.point, scatterDir.normalized());
-        attenuation = albedo_;
+        attenuation = diffuse_;
         return true;
     }
 
-    gm::IVec3 albedo() const override { return albedo_; }
+    gm::IVec3 diffuse() const override { return diffuse_; }
+    bool hasDiffuse() const override { return true; }
 };
 
 class RTMetal : public RTMaterial {
@@ -65,22 +71,23 @@ public:
         return true;
     }
 
-    gm::IVec3 albedo() const override { return {0.0, 0.0, 0.0}; }
+   gm::IVec3 specular() const override { return specularColor_; }
+   bool hasSpecular() const override { return true; }
 };
 
 class RTDielectric : public RTMaterial {
-    gm::IVec3 albedo_;
+    gm::IVec3 specular_;
     double refractionIndex_;
     
 public:
-    RTDielectric(const gm::IVec3 albedo, const double refractionIndex) : albedo_(albedo), refractionIndex_(refractionIndex) {}
+    RTDielectric(const gm::IVec3 specular, const double refractionIndex) : specular_(specular), refractionIndex_(refractionIndex) {}
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
                 gm::IVec3 &attenuation,
                 Ray& scattered) const override
     {
-        attenuation = albedo_;
+        attenuation = specular_;
 
         double eta = hitRecord.frontFace ? (1.0 / refractionIndex_) : refractionIndex_;
 
@@ -105,7 +112,8 @@ public:
         return true;
     }
 
-    gm::IVec3 albedo() const override { return albedo_; }
+    gm::IVec3 specular() const override { return specular_; }
+    bool hasSpecular() const override { return true; }
 
 private:
     static double reflectance(double cosine, double refractionIndex) {   
@@ -125,9 +133,7 @@ public:
         return false;
     }
 
-    gm::IVec3 emitted() const override {
-        return emission_;
-    }
+    gm::IVec3 emitted() const override { return emission_; }
 };
 
 
