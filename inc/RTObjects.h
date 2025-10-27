@@ -31,7 +31,7 @@ public:
     SphereObject(double radius, const RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
-        gm::IVec3 oc = ray.origin - position_; 
+        gm::IVec3 oc = ray.origin - position_;
         double a = dot(ray.direction, ray.direction);         
         double half_b = dot(oc, ray.direction);              
         double c = dot(oc, oc) - radius_ * radius_;

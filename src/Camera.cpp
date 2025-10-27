@@ -68,7 +68,9 @@ void Camera::rotate(const double widthRadians, const double heightRadians) {
 
 
 // Render
-void Camera::render(const SceneManager& sceneManager) {
+
+
+void Camera::renderParallel(const SceneManager& sceneManager) {
     int pixelCount = screenResolution_.first * screenResolution_.second;
 
     #pragma omp parallel
@@ -78,6 +80,22 @@ void Camera::render(const SceneManager& sceneManager) {
         for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
             renderSamplesPerPixel(pixelId, sceneManager);
         }
+    }
+}
+
+void Camera::render(const SceneManager& sceneManager) {
+    if (enableparallelRender_) {
+        renderParallel(sceneManager);
+        return;
+    }
+
+    renderSerial(sceneManager);
+}
+
+void Camera::renderSerial(const SceneManager& sceneManager) {
+    int pixelCount = screenResolution_.first * screenResolution_.second;
+    for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
+        renderSamplesPerPixel(pixelId, sceneManager);
     }
 }
 
@@ -108,6 +126,7 @@ Ray Camera::genRay(int pixelX, int pixelY) {
     return Ray(center_, rayDirection.normalized());
 }
 
+
 RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
 
@@ -115,11 +134,14 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
         gm::IVec3 emitted = rec.material->emitted();
-        gm::IVec3 Ldirect = (enableLDirect_ ? computeDirectLighting(rec, sceneManager) : gm::IVec3{0, 0, 0});
-        gm::IVec3 LIndirect = {0, 0, 0};
-        if (getMultipleScatterLInderect(ray, rec, depth, sceneManager, LIndirect))
-            return emitted + Ldirect + LIndirect;
-        return emitted + Ldirect;
+    
+
+        gm::IVec3 Lighting = (enableRayTracerMode_ ? 
+            computeMultipleScatterLInderect(ray, rec, depth, sceneManager) :
+            computeDirectLighting(rec, sceneManager)
+        );
+
+        return emitted + Lighting;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
@@ -136,7 +158,6 @@ gm::IVec3 Camera::computeDirectLighting(const HitRecord &rec, const SceneManager
     gm::IVec3 summaryLighting = {0, 0, 0};
 
     gm::IVec3 toView = center_ - rec.point;
-
     for (Light *lightSrc : sceneManager.inderectLightSources()) {
         HitRecord tmp;
         Ray toLightRay = Ray(rec.point, lightSrc->center() - rec.point);
@@ -149,24 +170,20 @@ gm::IVec3 Camera::computeDirectLighting(const HitRecord &rec, const SceneManager
     return summaryLighting;
 }
 
-bool Camera::getMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
-                                         const int depth, const SceneManager& sceneManager,
-                                         gm::IVec3 &LIndirect) const
+gm::IVec3 Camera::computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+                                                  const int depth, const SceneManager& sceneManager) const
 {
-    bool scatteredState = false;
-    LIndirect = {0, 0, 0};
+    gm::IVec3 LIndirect = {0, 0, 0};
     for (int i = 0; i < samplesPerScatter_; i++) {
         Ray scattered = {};
         RTColor attenuation = {};
         
         if (hitRecord.material->scatter(ray, hitRecord, attenuation, scattered)) {
             LIndirect += attenuation * getRayColor(scattered, depth-1, sceneManager);
-            scatteredState = true;
         }
     }
-    LIndirect = LIndirect * sampleScatterScale_;
-
-    return scatteredState;
+    
+    return LIndirect * sampleScatterScale_;
 }
 
 
@@ -219,3 +236,7 @@ void Camera::setThreadPixelbunchSize(const int newVal) {
 void Camera::disableLDirect() { enableLDirect_ = false; }
 void Camera::enableLDirect() { enableLDirect_ = true; }
 void Camera::setMaxRayDepth(int newVal) { maxRayDepth_ = newVal; }
+void Camera::enableParallelRender() { enableparallelRender_ = true; }
+void Camera::disableParallelRender() { enableparallelRender_ = false; }
+void Camera::enableRayTracerMode() { enableRayTracerMode_ = true; }
+void Camera::disableRayTracerMode() { enableRayTracerMode_ = false; }

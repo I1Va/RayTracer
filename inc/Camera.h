@@ -10,7 +10,6 @@ class SceneManager;
 inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
 inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_SCATTER = 3;
 inline constexpr int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
-inline constexpr bool DEFAULT_CAMERA_ENABLE_LIDERECT = true;
 inline constexpr size_t DEFAULT_THREAD_PIXELBUNCH_SIZE = 64;
 
 struct RTPixelColor {
@@ -44,11 +43,11 @@ class Camera {
     int samplesPerPixel_        = DEFAULT_CAMERA_SAMPLES_PER_PIXEL;
     int samplesPerScatter_      = DEFAULT_CAMERA_SAMPLES_PER_SCATTER;
     int maxRayDepth_            = DEFAULT_CAMERA_MAX_RAY_DEPTH;
-
     int threadPixelbunchSize_   = DEFAULT_THREAD_PIXELBUNCH_SIZE;
 
-
-    bool enableLDirect_     = true;
+    bool enableparallelRender_  = true;
+    bool enableLDirect_         = true;
+    bool enableRayTracerMode_   = false;
 
   public:
   // Constructors
@@ -61,6 +60,8 @@ class Camera {
     void move(const gm::IVec3 motionVec);
 
   // Render
+    void renderSerial(const SceneManager& sceneManager);
+    void renderParallel(const SceneManager& sceneManager);
     void render(const SceneManager& sceneManager);
 
   // Getters
@@ -79,6 +80,11 @@ class Camera {
     void setThreadPixelbunchSize(const int newVal);
     void disableLDirect();
     void enableLDirect();
+    void enableParallelRender();
+    void disableParallelRender();
+    void enableRayTracerMode();
+    void disableRayTracerMode();
+
 
 private:    
     // camera fields updating
@@ -97,9 +103,8 @@ private:
 
   
 
-    bool getMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
-                                     const int depth, const SceneManager& sceneManager,
-                                     gm::IVec3 &LIndirect) const;
+    gm::IVec3 computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+                                              const int depth, const SceneManager& sceneManager) const;
 };
 
 
