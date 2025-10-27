@@ -10,7 +10,7 @@ class SceneManager;
 inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_PIXEL = 3;
 inline constexpr int DEFAULT_CAMERA_SAMPLES_PER_SCATTER = 3;
 inline constexpr int DEFAULT_CAMERA_MAX_RAY_DEPTH = 10;
-inline constexpr size_t DEFAULT_THREAD_PIXELBUNCH_SIZE = 64;
+inline constexpr std::size_t DEFAULT_THREAD_PIXELBUNCH_SIZE = 64;
 
 struct RTPixelColor {
     uint8_t r, g, b, a;
@@ -21,18 +21,18 @@ struct Viewport {
     static constexpr const double VIEWPORT_HEIGHT = 1;
     
     gm::IPoint3 upperLeft_;
-    gm::IVec3 rightDir_;
-    gm::IVec3 downDir_;
+    gm::IVec3f rightDir_;
+    gm::IVec3f downDir_;
 };
 
 class Camera {
     static constexpr const double FOCAL_LENGTH = 1;
 
     gm::IPoint3 center_    = {};
-    gm::IVec3   direction_ = {};
+    gm::IVec3f   direction_ = {};
 
     Viewport         viewPort_  = {};
-    gm::IVec2 viewAngle_ = {};
+    gm::IVec2f viewAngle_ = {};
 
     std::pair<int, int> screenResolution_ = {};
     std::vector<RTPixelColor> pixels_ = {};
@@ -52,12 +52,12 @@ class Camera {
   public:
   // Constructors
     Camera();
-    Camera(const gm::IPoint3 &center, const gm::IVec3 &direction,
+    Camera(const gm::IPoint3 &center, const gm::IVec3f &direction,
            const std::pair<int, int> &screenResolution);
 
   // Camera control
     void rotate(const double widthRadians, const double heightRadians);
-    void move(const gm::IVec3 motionVec);
+    void move(const gm::IVec3f motionVec);
 
   // Render
     void renderSerial(const SceneManager& sceneManager);
@@ -66,11 +66,11 @@ class Camera {
 
   // Getters
     const std::pair<int, int> &screenResolution() const;
-    gm::IVec2 viewAngle() const;
+    gm::IVec2f viewAngle() const;
     RTPixelColor getPixel(const int pixelX, const int pixelY) const;
     const Viewport &viewPort() const;
     const std::vector<RTPixelColor> pixels() const;
-    gm::IVec3 direction() const;
+    gm::IVec3f direction() const;
     const gm::IPoint3 center() const;
 
   // Setters
@@ -99,11 +99,11 @@ private:
 
 
     // ray color details
-    gm::IVec3 computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const;
+    gm::IVec3f computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const;
 
   
 
-    gm::IVec3 computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+    gm::IVec3f computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
                                               const int depth, const SceneManager& sceneManager) const;
 };
 

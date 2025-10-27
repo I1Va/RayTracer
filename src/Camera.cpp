@@ -39,7 +39,7 @@ Camera::Camera(): direction_(0, 0, 1) {}
 
 Camera::Camera
 (
-    const gm::IPoint3 &center, const gm::IVec3 &direction,
+    const gm::IPoint3 &center, const gm::IVec3f &direction,
     const std::pair<int, int> &screenResolution
 ): 
     center_(center), direction_(direction.normalized()), 
@@ -55,7 +55,7 @@ Camera::Camera
 
 
 // Camera control
-void Camera::move(const gm::IVec3 motionVec) {
+void Camera::move(const gm::IVec3f motionVec) {
     center_ = center_ + motionVec;
     updateViewPort();
 }
@@ -121,7 +121,7 @@ Ray Camera::genRay(int pixelX, int pixelY) {
                                         viewPort_.rightDir_ * (pixelX + gm::randomDouble(0.0, 1.0)) * deltaWidth +
                                         viewPort_.downDir_  * (pixelY + gm::randomDouble(0.0, 1.0)) * deltaHeight;
     
-    gm::IVec3 rayDirection = viewPortPoint - center_;
+    gm::IVec3f rayDirection = viewPortPoint - center_;
 
     return Ray(center_, rayDirection.normalized());
 }
@@ -133,10 +133,10 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
     HitRecord rec = {};
 
     if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
-        gm::IVec3 emitted = rec.material->emitted();
+        gm::IVec3f emitted = rec.material->emitted();
 
-        gm::IVec3 LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
-        gm::IVec3 LDirect = computeDirectLighting(rec, sceneManager);
+        gm::IVec3f LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
+        gm::IVec3f LDirect = {0, 0, 0}; // computeDirectLighting(rec, sceneManager);
         
         return emitted + LIndirect + LDirect;
     }
@@ -151,10 +151,10 @@ void Camera::setPixel(const int pixelX, const int pixelY, const RTPixelColor col
 
 
 // Light???
-gm::IVec3 Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const {
-    gm::IVec3 summaryLighting = {0, 0, 0};
+gm::IVec3f Camera::computeDirectLighting(const HitRecord &rec, const SceneManager& sceneManager) const {
+    gm::IVec3f summaryLighting = {0, 0, 0};
 
-    gm::IVec3 toView = center_ - rec.point;
+    gm::IVec3f toView = center_ - rec.point;
     for (Light *lightSrc : sceneManager.inderectLightSources()) {
         Ray toLightRay = Ray(rec.point, lightSrc->center() - rec.point);
     
@@ -167,10 +167,10 @@ gm::IVec3 Camera::computeDirectLighting(const HitRecord &rec, const SceneManager
     return summaryLighting;
 }
 
-gm::IVec3 Camera::computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
+gm::IVec3f Camera::computeMultipleScatterLInderect(const Ray& ray, const HitRecord &hitRecord, 
                                                   const int depth, const SceneManager& sceneManager) const
 {
-    gm::IVec3 LIndirect = {0, 0, 0};
+    gm::IVec3f LIndirect = {0, 0, 0};
     for (int i = 0; i < samplesPerScatter_; i++) {
         Ray scattered = {};
         RTColor attenuation = {};
@@ -193,28 +193,28 @@ std::ostream &operator<<(std::ostream &stream, const Camera &camera) {
 
 // Camera fields updating
 void Camera::updateViewPort() {
-    gm::IVec3 worldUp(0.0, 0.0, 1.0);
+    gm::IVec3f worldUp(0.0, 0.0, 1.0);
     if (std::abs(gm::dot(direction_, worldUp)) > 0.999)
-        worldUp = gm::IVec3(0.0, 1.0, 0.0);
+        worldUp = gm::IVec3f(0.0, 1.0, 0.0);
 
     viewPort_.rightDir_ = cross(direction_, worldUp).normalized();
     viewPort_.downDir_ = cross(direction_, viewPort_.rightDir_).normalized();
 
-    gm::IVec3 rightFull = viewPort_.rightDir_ * viewPort_.VIEWPORT_WIDTH;
-    gm::IVec3 downFull    = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
+    gm::IVec3f rightFull = viewPort_.rightDir_ * viewPort_.VIEWPORT_WIDTH;
+    gm::IVec3f downFull    = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
 
     viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - rightFull* 0.5 - downFull * 0.5; 
 }
 
 
 // Getters
-gm::IVec3 Camera::direction() const { return direction_; }
+gm::IVec3f Camera::direction() const { return direction_; }
 RTPixelColor Camera::getPixel(const int pixelX, const int pixelY) const {
     return pixels_[pixelX * screenResolution_.second + pixelY];
 }
 const std::vector<RTPixelColor> Camera::pixels() const { return pixels_; }
 const std::pair<int, int> &Camera::screenResolution() const { return screenResolution_; }
-gm::IVec2 Camera::viewAngle() const { return viewAngle_; }
+gm::IVec2f Camera::viewAngle() const { return viewAngle_; }
 const Viewport &Camera::viewPort() const { return viewPort_; }
 const gm::IPoint3 Camera::center() const { return center_; }
 
