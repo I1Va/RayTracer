@@ -2,6 +2,7 @@
 #define RTOBJECTS_H
 
 #include <vector>
+#include <string>
 
 #include "Geom.hpp"
 #include "RTMaterial.h"
@@ -22,6 +23,7 @@ public:
     virtual ~Primitives() = default;
 
     virtual bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
+    virtual std::string typeString() const { return "Primitive"; }
 };
 
 class SphereObject : public Primitives {
@@ -55,6 +57,8 @@ public:
         rec.material = material_;
         return true;
     }
+
+    std::string typeString() const override { return "Sphere"; }
 };
 
 class PlaneObject : public Primitives {
@@ -85,6 +89,8 @@ public:
 
         return true;
     }
+
+    std::string typeString() const override { return "Plane"; }
 };
 
 
@@ -130,6 +136,7 @@ public:
     const SceneManager *parent() const { return parent_; }
     void setParent(const SceneManager *parent) { parent_ = parent; }
     void setPosition(const gm::IPoint3 center) { center_ = center; }
+    virtual std::string typeString() const { return "Light"; }
 
 private:
     // Lambert

@@ -25,15 +25,15 @@ void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
     Primitivess_.push_back(object);
 }
 
-void SceneManager::addLight(gm::IPoint3 position, Light *object) {
-    assert(object);
+void SceneManager::addLight(gm::IPoint3 position, Light *light) {
+    assert(light);
 
-    if (object->parent() != this && object->parent() != nullptr) 
-        assert(0 && "addObject failed : object parent != this or nullptr");
+    if (light->parent() != this && light->parent() != nullptr) 
+        assert(0 && "addLight failed : light parent != this or nullptr");
     
-    object->setParent(this);
-    object->setPosition(position);
-    inderectLightSources_.push_back(object);
+    light->setParent(this);
+    light->setPosition(position);
+    inderectLightSources_.push_back(light);
 }
 
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
