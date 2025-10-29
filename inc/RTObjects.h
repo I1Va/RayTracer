@@ -16,12 +16,13 @@ inline constexpr float SELECTED_DELTA_Z = 0.1;
 class SceneManager;
 
 struct Primitives {
-    const RTMaterial *material_;
     const SceneManager *parent_;
+
+    RTMaterial *material_;
     gm::IPoint3 position_;
     bool selectFlag_ = false;
 
-    Primitives(const RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
+    Primitives(RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
         assert(material);
     }
 
@@ -29,7 +30,15 @@ public:
     virtual ~Primitives() = default;
 
     virtual bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
+
     virtual std::string typeString() const { return "Primitive"; }
+
+    const gm::IPoint3& position() const { return position_; }
+    gm::IPoint3& position() { return position_; }
+
+    const RTMaterial* material() const { return material_; }
+    RTMaterial* material() { return material_; }
+
 
     void setSelectFlag(bool val) {selectFlag_ = val; }
     bool selected() const { return selectFlag_; }
@@ -39,7 +48,7 @@ class SphereObject : public Primitives {
     double radius_;
 
 public:
-    SphereObject(double radius, const RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
+    SphereObject(double radius, RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
         gm::IVec3f oc = ray.origin - position_;
@@ -79,7 +88,7 @@ public:
     PlaneObject
     (
         const gm::IPoint3 point, gm::IVec3f normal,
-        const RTMaterial *material, const SceneManager *parent=nullptr
+        RTMaterial *material, const SceneManager *parent=nullptr
     ):
         Primitives(material, parent), point_(point), normal_(normal.normalized()) {}
 

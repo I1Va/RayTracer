@@ -9,6 +9,10 @@ using RTColor = gm::IVec3f;
 struct RTMaterial {
     virtual ~RTMaterial() = default;
 
+    gm::IVec3f diffuse_ = gm::IVec3f(0, 0, 0);
+    gm::IVec3f specular_ = gm::IVec3f(0, 0, 0);
+    gm::IVec3f emission_ = gm::IVec3f(0, 0, 0);
+
     virtual bool scatter(
         const Ray& inRay,
         const HitRecord &hitRecord,
@@ -20,17 +24,19 @@ struct RTMaterial {
     virtual bool hasDiffuse() const { return false; }
     virtual bool hasEmmision() const { return false; }
     
-    virtual gm::IVec3f emitted() const { return {0.0, 0.0, 0.0}; }
-    virtual gm::IVec3f diffuse() const { return {0.0, 0.0, 0.0}; }
-    virtual gm::IVec3f specular() const { return {0.0, 0.0, 0.0}; }
+    virtual std::string typeString() const { return "RTMaterial"; }
+
+    gm::IVec3f &diffuse()  { return diffuse_; }
+    gm::IVec3f &specular() { return specular_; }
+    gm::IVec3f &emitted()  { return emission_; }
+    const gm::IVec3f &diffuse()  const { return diffuse_; }
+    const gm::IVec3f &specular() const { return specular_; }
+    const gm::IVec3f &emitted()  const { return emission_; }
 };
 
 class RTLambertian : public RTMaterial {
-    gm::IVec3f diffuse_;
-
 public:
-    explicit RTLambertian(const gm::IVec3f& diffuse)
-        : diffuse_(diffuse) {}
+    explicit RTLambertian(const gm::IVec3f& diffuse) {diffuse_ = diffuse; }
 
     bool scatter(const Ray& inRay,
                  const HitRecord &hitRecord,
@@ -47,16 +53,17 @@ public:
         return true;
     }
 
-    gm::IVec3f diffuse() const override { return diffuse_; }
+    std::string typeString() const override { return "Lambertian"; }
+
     bool hasDiffuse() const override { return true; }
 };
 
 class RTMetal : public RTMaterial {
-    gm::IVec3f specularColor_; 
+   
     double fuzz_;
 
 public:
-    RTMetal(const RTColor& specularColor, double fuzz) : specularColor_(specularColor), fuzz_(fuzz < 1 ? fuzz : 1) {}
+    RTMetal(const RTColor& specularColor, double fuzz) : fuzz_(fuzz < 1 ? fuzz : 1) {specular_ = specularColor; }
 
     bool scatter(const Ray& inRay,
                 const HitRecord &hitRecord,
@@ -66,12 +73,13 @@ public:
         gm::IVec3f reflected = reflect(inRay.direction, hitRecord.normal);
         reflected = reflected.normalized() + gm::IVec3f::randomUnit() * fuzz_;
         scattered = Ray(hitRecord.point, reflected);
-        attenuation = specularColor_;
+        attenuation = specular_;
         return true;
     }
 
-   gm::IVec3f specular() const override { return specularColor_; }
-   bool hasSpecular() const override { return true; }
+    std::string typeString() const override { return "Metal"; }
+
+    bool hasSpecular() const override { return true; }
 };
 
 class RTDielectric : public RTMaterial {
@@ -111,7 +119,8 @@ public:
         return true;
     }
 
-    gm::IVec3f specular() const override { return specular_; }
+    std::string typeString() const override { return "Dielectric"; }
+
     bool hasSpecular() const override { return true; }
 
 private:
@@ -123,16 +132,15 @@ private:
 };
 
 class RTEmissive : public RTMaterial {
-    gm::IVec3f emission_;
+   
 public:
-    explicit RTEmissive(const gm::IVec3f& emission)
-        : emission_(emission) {}
+    explicit RTEmissive(const gm::IVec3f& emission) { emission_ = emission; }
 
     bool scatter(const Ray&, const HitRecord&, gm::IVec3f&, Ray&) const override {
         return false;
     }
 
-    gm::IVec3f emitted() const override { return emission_; }
+    std::string typeString() const override { return "Emissive"; }
 };
 
 
