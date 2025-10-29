@@ -6,9 +6,9 @@ class Camera;
 
 
 class SceneManager {
-    std::vector<Primitives *> Primitivess_;
+    std::vector<Primitives *> primitives_;
 
-    std::vector<Light *> inderectLightSources_;
+    std::vector<Light *> directLightSources_;
 public:
     SceneManager() = default;
 
@@ -22,6 +22,9 @@ public:
     const std::vector<Light *> &inderectLightSources() const;
 
     void render(Camera &camera);
+
+    const std::vector<Primitives *> &primitives() const { return primitives_; }
+    const std::vector<Light *> &lights() const { return directLightSources_; }
 
     private:
         void update();

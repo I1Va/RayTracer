@@ -5,15 +5,21 @@
 #include <string>
 
 #include "Geom.hpp"
+#include "IVec3f.hpp"
 #include "RTMaterial.h"
 #include "RTGeometry.h"
+
+inline constexpr float SELECTED_DELTA_X = 0.1;
+inline constexpr float SELECTED_DELTA_Y = 0.1;
+inline constexpr float SELECTED_DELTA_Z = 0.1;
 
 class SceneManager;
 
 struct Primitives {
     const RTMaterial *material_;
     const SceneManager *parent_;
-    gm::IPoint3 position_; 
+    gm::IPoint3 position_;
+    bool selectFlag_ = false;
 
     Primitives(const RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
         assert(material);
@@ -24,6 +30,9 @@ public:
 
     virtual bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
     virtual std::string typeString() const { return "Primitive"; }
+
+    void setSelectFlag(bool val) {selectFlag_ = val; }
+    bool selected() const { return selectFlag_; }
 };
 
 class SphereObject : public Primitives {
@@ -55,6 +64,7 @@ public:
         gm::IVec3f outwardNormal = (rec.point - position_) / radius_; 
         rec.setFaceNormal(ray, outwardNormal);
         rec.material = material_;
+        rec.object = this;
         return true;
     }
 
@@ -79,6 +89,7 @@ public:
         if (!rayTime.surrounds(time)) return false;
 
         hitRecord.material = material_;
+        hitRecord.object = this;
         hitRecord.time = time;
         hitRecord.point = ray.origin + ray.direction * time;
         
@@ -86,6 +97,7 @@ public:
         if (dot(normal_, ray.direction) < 0) outwardNormal = normal_ * (-1);  
 
         hitRecord.setFaceNormal(ray, outwardNormal);
+         
 
         return true;
     }

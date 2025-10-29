@@ -6,12 +6,12 @@
 
 
 SceneManager::~SceneManager() {
-    for (Primitives *object : Primitivess_)
+    for (Primitives *object : primitives_)
         delete object;
 }
 
 const std::vector<Light *> &SceneManager::inderectLightSources() const {
-    return inderectLightSources_;
+    return directLightSources_;
 }
 
 void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
@@ -22,7 +22,7 @@ void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
     
     object->parent_ = this;
     object->position_ = position;
-    Primitivess_.push_back(object);
+    primitives_.push_back(object);
 }
 
 void SceneManager::addLight(gm::IPoint3 position, Light *light) {
@@ -33,7 +33,7 @@ void SceneManager::addLight(gm::IPoint3 position, Light *light) {
     
     light->setParent(this);
     light->setPosition(position);
-    inderectLightSources_.push_back(light);
+    directLightSources_.push_back(light);
 }
 
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
@@ -41,7 +41,7 @@ bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRe
     bool hitAnything = false;
     double closestTime = rayTime.max;
 
-    for (Primitives *object: Primitivess_) {
+    for (Primitives *object: primitives_) {
         if (object->hit(ray, Interval(rayTime.min, closestTime), tempRecord)) {
             hitAnything = true;
             closestTime = tempRecord.time;

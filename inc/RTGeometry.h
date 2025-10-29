@@ -3,6 +3,7 @@
 
 #include "IVec3f.hpp"
 class RTMaterial;
+class Primitives;
 #include "GmUtilities.hpp"
 
 
@@ -49,6 +50,7 @@ struct HitRecord {
     gm::IPoint3 point = {};
     gm::IVec3f normal = {};
     const RTMaterial *material = nullptr;
+    const Primitives *object = nullptr;
     bool frontFace = false;
     double time = 0;
 
