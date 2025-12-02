@@ -58,7 +58,7 @@ void Camera::render
     const std::pair<int, int> screenResolution,
     std::vector<RTPixelColor> &outputBufer
 ) {
-    if (renderProperties_.enableParallelRender) {
+    if (renderProperties.enableParallelRender) {
         renderParallel(sceneManager, screenResolution, outputBufer);
         return;
     }
@@ -74,11 +74,11 @@ void Camera::renderParallel
     int pixelCount = screenResolution.first * screenResolution.second;
     assert(pixelCount == static_cast<int>(outputBufer.size()));
     pixelCount = std::min(pixelCount, static_cast<int>(outputBufer.size()));
-    
+
     #pragma omp parallel
     {
         std::mt19937 rng(1234 + omp_get_thread_num());
-        #pragma omp for schedule(dynamic,renderProperties_.threadPixelbunchSize)
+        #pragma omp for schedule(dynamic,renderProperties.threadPixelbunchSize)
         for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
             outputBufer[pixelId] = renderPixelColor(sceneManager, pixelId, screenResolution);
         }
@@ -110,9 +110,9 @@ RTPixelColor Camera::renderPixelColor
     int pixelY = pixelId / screenResolution.first;
 
     RTColor sampleSumColor = RTColor(0,0,0);
-    for (int sample = 0; sample < renderProperties_.samplesPerPixel; sample++) {
+    for (int sample = 0; sample < renderProperties.samplesPerPixel; sample++) {
         Ray ray = genRay(pixelX, pixelY, screenResolution);
-        RTColor rayColor = getRayColor(ray, renderProperties_.maxRayDepth, sceneManager);
+        RTColor rayColor = getRayColor(ray, renderProperties.maxRayDepth, sceneManager);
 
         sampleSumColor += rayColor;
     }
@@ -143,7 +143,7 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
         if (rec.object->selected()) emitted += selected_delta;
 
         gm::IVec3f LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
-        gm::IVec3f LDirect   = (renderProperties_.enableLDirect ? computeDirectLighting(rec, sceneManager) : gm::IVec3f{0, 0, 0});
+        gm::IVec3f LDirect   = (renderProperties.enableLDirect ? computeDirectLighting(rec, sceneManager) : gm::IVec3f{0, 0, 0});
         
         return emitted + LIndirect + LDirect;
     }
@@ -174,7 +174,7 @@ gm::IVec3f Camera::computeMultipleScatterLInderect(const Ray& ray, const HitReco
                                                   const int depth, const SceneManager& sceneManager) const
 {
     gm::IVec3f LIndirect = {0, 0, 0};
-    for (int i = 0; i < renderProperties_.samplesPerScatter; i++) {
+    for (int i = 0; i < renderProperties.samplesPerScatter; i++) {
         Ray scattered = {};
         RTColor attenuation = {};
         
@@ -217,14 +217,11 @@ gm::IVec3f Camera::direction() const { return direction_; }
 const gm::IPoint3 Camera::center() const { return center_; }
 
 // Setters
-void Camera::setRenderProperties(const CameraRenderProperties &properties) {
-    renderProperties_ = properties;
-}
 void Camera::setCenter(const gm::IPoint3 center) { 
     center_ = center; 
     updateViewPort();
 }
 void Camera::setDirection(const gm::IVec3f direction) {
-    direction_ = direction;
+    direction_ = direction.normalized();
     updateViewPort();
 }

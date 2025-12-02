@@ -33,14 +33,8 @@ struct Viewport {
 };
 
 class Camera {
-    static constexpr const double FOCAL_LENGTH = 1;
-
-    gm::IPoint3 center_    = gm::IPoint3(0, 0, 0);
-    gm::IVec3f  direction_ = gm::IVec3f(0, 0, 1);
-
-    Viewport   viewPort_  = {};
-   
-    CameraRenderProperties renderProperties_ = 
+public:
+    CameraRenderProperties renderProperties = 
     {
         .samplesPerPixel        = 3,
         .samplesPerScatter      = 3,
@@ -50,11 +44,17 @@ class Camera {
         .enableLDirect          = true,
         .enableRayTracerMode    = true,
     };
+private:
+    static constexpr const double FOCAL_LENGTH = 1;
 
-    double pixelSamplesScale_   = 1.0 / renderProperties_.samplesPerPixel;
-    double sampleScatterScale_  = 1.0 / renderProperties_.samplesPerScatter;
+    gm::IPoint3 center_    = gm::IPoint3(0, 0, 0);
+    gm::IVec3f  direction_ = gm::IVec3f(0, 0, 1);
 
-  public:
+    Viewport   viewPort_  = {};
+    double pixelSamplesScale_   = 1.0 / renderProperties.samplesPerPixel;
+    double sampleScatterScale_  = 1.0 / renderProperties.samplesPerScatter;
+
+public:
   // Constructors
     Camera();
 
@@ -91,13 +91,11 @@ class Camera {
         const std::pair<int, int> screenResolution
     );
 
-
   // Getters
     gm::IVec3f direction() const;
     const gm::IPoint3 center() const;
 
   // Setters
-    void setRenderProperties(const CameraRenderProperties &properties);
     void setCenter(const gm::IPoint3 center);
     void setDirection(const gm::IVec3f direction);
 
