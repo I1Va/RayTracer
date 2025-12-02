@@ -17,12 +17,13 @@ class SceneManager;
 
 struct Primitives {
     const SceneManager *parent_;
-
+    
     RTMaterial *material_;
-    gm::IPoint3 position_;
+
+    gm::IPoint3 position_{};
     bool selectFlag_ = false;
 
-    Primitives(RTMaterial *material, const SceneManager *parent=nullptr): material_(material), parent_(parent) {
+    Primitives(RTMaterial *material, const SceneManager *parent=nullptr): parent_(parent), material_(material) {
         assert(material);
     }
 

@@ -38,7 +38,7 @@ class RTLambertian : public RTMaterial {
 public:
     explicit RTLambertian(const gm::IVec3f& diffuse) {diffuse_ = diffuse; }
 
-    bool scatter(const Ray& inRay,
+    bool scatter(const Ray&,
                  const HitRecord &hitRecord,
                  gm::IVec3f &attenuation,
                  Ray& scattered) const override
