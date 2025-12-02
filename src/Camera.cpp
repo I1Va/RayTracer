@@ -159,7 +159,7 @@ gm::IVec3f Camera::computeDirectLighting(const HitRecord &rec, const SceneManage
 
     gm::IVec3f toView = center_ - rec.point;
     for (Light *lightSrc : sceneManager.inderectLightSources()) {
-        Ray toLightRay = Ray(rec.point, lightSrc->center() - rec.point);
+        Ray toLightRay = Ray(rec.point, lightSrc->position() - rec.point);
     
         HitRecord tmp;
         bool hitted = sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp);
@@ -214,7 +214,8 @@ void Camera::updateViewPort() {
 
 // Getters
 gm::IVec3f Camera::direction() const { return direction_; }
-const gm::IPoint3 Camera::center() const { return center_; }
+gm::IPoint3 Camera::center() const { return center_; }
+Viewport Camera::viewPort() const { return viewPort_; }
 
 // Setters
 void Camera::setCenter(const gm::IPoint3 center) { 

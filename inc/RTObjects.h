@@ -15,7 +15,8 @@ inline constexpr float SELECTED_DELTA_Z = 0.1;
 
 class SceneManager;
 
-struct Primitives {
+class Primitives {
+protected:
     const SceneManager *parent_;
     
     RTMaterial *material_;
@@ -34,8 +35,8 @@ public:
 
     virtual std::string typeString() const { return "Primitive"; }
 
-    const gm::IPoint3& position() const { return position_; }
-    gm::IPoint3& position() { return position_; }
+    void setPosition(const gm::IPoint3 position) { position_ = position; }
+    gm::IPoint3 position() const { return position_; }
 
     const RTMaterial* material() const { return material_; }
     RTMaterial* material() { return material_; }
@@ -43,6 +44,8 @@ public:
 
     void setSelectFlag(bool val) {selectFlag_ = val; }
     bool selected() const { return selectFlag_; }
+
+friend SceneManager;
 };
 
 class SphereObject : public Primitives {
@@ -115,14 +118,11 @@ public:
     std::string typeString() const override { return "Plane"; }
 };
 
-
-
-
 class Light {
     gm::IVec3f ambientIntensity_;
     gm::IVec3f defuseIntensity_;
     gm::IVec3f specularIntensity_;
-    gm::IPoint3 center_;
+    gm::IPoint3 position_;
     double viewLightPow_;
 
     const SceneManager *parent_;
@@ -141,10 +141,12 @@ public:
     specularIntensity_(specularIntensity),
     viewLightPow_(viewLightPow),
     parent_(parent) {}
+    
+    virtual ~Light() = default;
 
     virtual RTColor getDirectLighting(const gm::IVec3f toView, const HitRecord &rec, bool hitted) 
     {
-        gm::IVec3f toLight = (center_ - rec.point).normalized();
+        gm::IVec3f toLight = (position_ - rec.point).normalized();
         
         gm::IVec3f ambientIntensity  = ambientIntensity_ * rec.material->diffuse();
         gm::IVec3f defuseIntensity   = defuseLightIntensity(toLight, rec.normal) * rec.material->diffuse();
@@ -154,10 +156,11 @@ public:
         return ambientIntensity + (defuseIntensity + specularIntensity) * shadowFactor;
     }
 
-    gm::IPoint3 center() const { return center_; }
+    void setPosition(const gm::IPoint3 position) { position_ = position; }
+    gm::IPoint3 position() const { return position_; }
+
     const SceneManager *parent() const { return parent_; }
     void setParent(const SceneManager *parent) { parent_ = parent; }
-    void setPosition(const gm::IPoint3 center) { center_ = center; }
     virtual std::string typeString() const { return "Light"; }
 
 private:

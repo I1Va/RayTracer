@@ -8,6 +8,8 @@
 SceneManager::~SceneManager() {
     for (Primitives *object : primitives_)
         delete object;
+    for (Light *object : directLightSources_)
+        delete object;
 }
 
 const std::vector<Light *> &SceneManager::inderectLightSources() const {

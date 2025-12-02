@@ -50,7 +50,7 @@ private:
     gm::IPoint3 center_    = gm::IPoint3(0, 0, 0);
     gm::IVec3f  direction_ = gm::IVec3f(0, 0, 1);
 
-    Viewport   viewPort_  = {};
+    Viewport viewPort_  = {};
     double pixelSamplesScale_   = 1.0 / renderProperties.samplesPerPixel;
     double sampleScatterScale_  = 1.0 / renderProperties.samplesPerScatter;
 
@@ -93,7 +93,8 @@ public:
 
   // Getters
     gm::IVec3f direction() const;
-    const gm::IPoint3 center() const;
+    gm::IPoint3 center() const;
+    Viewport viewPort() const;
 
   // Setters
     void setCenter(const gm::IPoint3 center);

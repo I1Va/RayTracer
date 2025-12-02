@@ -143,5 +143,30 @@ public:
     std::string typeString() const override { return "Emissive"; }
 };
 
+class RTMaterialManager {   
+    std::vector<std::unique_ptr<RTMaterial>> children;
+public:
+    RTMaterialManager() = default;
+    ~RTMaterialManager() = default;
+
+    RTMaterial *MakeLambertian(const gm::IVec3f& diffuse) {
+        children.push_back(std::make_unique<RTLambertian>(diffuse));
+        return children.back().get();
+    }
+    RTMaterial *MakeMetal(const RTColor &specularColor, double fuzz) {
+        children.push_back(std::make_unique<RTMetal>(specularColor, fuzz));
+        return children.back().get();
+    }
+
+    RTMaterial *MakeDielectric(gm::IVec3f specular, double refractionIndex) {
+        children.push_back(std::make_unique<RTDielectric>(specular, refractionIndex));
+        return children.back().get();
+    }
+
+    RTMaterial *MakeEmissive(const gm::IVec3f &emission) {
+        children.push_back(std::make_unique<RTEmissive>(emission));
+        return children.back().get();
+    }
+};
 
 #endif // #define RTMATERIAL_H

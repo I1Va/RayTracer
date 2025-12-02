@@ -7,7 +7,6 @@ class Camera;
 
 class SceneManager {
     std::vector<Primitives *> primitives_;
-
     std::vector<Light *> directLightSources_;
 public:
     SceneManager() = default;
@@ -17,10 +16,14 @@ public:
     void addObject(const gm::IPoint3 position, Primitives *object);
     void addLight(const gm::IPoint3 position, Light *light);
 
+
     bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const;
 
     const std::vector<Light *> &inderectLightSources() const;
 
+
+    std::vector<Primitives *> &primitives() { return primitives_; }
+    std::vector<Light *> &lights() { return directLightSources_; }
     const std::vector<Primitives *> &primitives() const { return primitives_; }
     const std::vector<Light *> &lights() const { return directLightSources_; }
 };
