@@ -51,10 +51,3 @@ bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRe
 
     return hitAnything;
 }
-
-void SceneManager::render(Camera &camera) {
-    update();
-    camera.render(*this);
-}
-
-void SceneManager::update() {}

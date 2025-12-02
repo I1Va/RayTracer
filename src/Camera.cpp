@@ -1,5 +1,6 @@
 #include <iostream>
 #include <omp.h>
+#include <cassert>
 
 #include "Camera.h"
 #include "RayTracer.h"
@@ -35,24 +36,7 @@ RTPixelColor convertRTColor(const RTColor &color) {
 
 
 // Constructors
-Camera::Camera(): direction_(0, 0, 1) {}
-
-Camera::Camera
-(
-    const gm::IPoint3 &center, const gm::IVec3f &direction,
-    const std::pair<int, int> &screenResolution
-): 
-    center_(center), direction_(direction.normalized()), 
-    screenResolution_(screenResolution), pixels_(screenResolution.first * screenResolution.second)
-{   
-    pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
-    samplesPerScatter_ = 1.0 / samplesPerScatter_;
-
-    viewAngle_.setX(2 * std::atan(viewPort_.VIEWPORT_HEIGHT / FOCAL_LENGTH));
-    viewAngle_.setY(2 * std::atan(viewPort_.VIEWPORT_WIDTH / FOCAL_LENGTH));
-    updateViewPort();
-};
-
+Camera::Camera() { updateViewPort(); }
 
 // Camera control
 void Camera::move(const gm::IVec3f motionVec) {
@@ -68,54 +52,76 @@ void Camera::rotate(const double widthRadians, const double heightRadians) {
 
 
 // Render
+void Camera::render
+(
+    const SceneManager& sceneManager,
+    const std::pair<int, int> screenResolution,
+    std::vector<RTPixelColor> &outputBufer
+) {
+    if (renderProperties_.enableParallelRender) {
+        renderParallel(sceneManager, screenResolution, outputBufer);
+        return;
+    }
+    renderSerial(sceneManager, screenResolution, outputBufer);
+}
 
-
-void Camera::renderParallel(const SceneManager& sceneManager) {
-    int pixelCount = screenResolution_.first * screenResolution_.second;
-
+void Camera::renderParallel
+(
+    const SceneManager& sceneManager,
+    const std::pair<int, int> screenResolution,
+    std::vector<RTPixelColor> &outputBufer
+) {
+    int pixelCount = screenResolution.first * screenResolution.second;
+    assert(pixelCount == static_cast<int>(outputBufer.size()));
+    pixelCount = std::min(pixelCount, static_cast<int>(outputBufer.size()));
+    
     #pragma omp parallel
     {
         std::mt19937 rng(1234 + omp_get_thread_num());
-        #pragma omp for schedule(dynamic,threadPixelbunchSize_)
+        #pragma omp for schedule(dynamic,renderProperties_.threadPixelbunchSize)
         for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
-            renderSamplesPerPixel(pixelId, sceneManager);
+            outputBufer[pixelId] = renderPixelColor(sceneManager, pixelId, screenResolution);
         }
     }
 }
 
-void Camera::render(const SceneManager& sceneManager) {
-    if (enableparallelRender_) {
-        renderParallel(sceneManager);
-        return;
-    }
+void Camera::renderSerial
+(
+    const SceneManager& sceneManager,
+    const std::pair<int, int> screenResolution,
+    std::vector<RTPixelColor> &outputBufer
+) {
+    int pixelCount = screenResolution.first * screenResolution.second;
+    assert(pixelCount == static_cast<int>(outputBufer.size()));
+    pixelCount = std::min(pixelCount, static_cast<int>(outputBufer.size()));
 
-    renderSerial(sceneManager);
-}
-
-void Camera::renderSerial(const SceneManager& sceneManager) {
-    int pixelCount = screenResolution_.first * screenResolution_.second;
     for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
-        renderSamplesPerPixel(pixelId, sceneManager);
+        outputBufer[pixelId] = renderPixelColor(sceneManager, pixelId, screenResolution);
     }
 }
 
-void Camera::renderSamplesPerPixel(const int pixelId, const SceneManager& sceneManager) {
-    int pixelX = pixelId % screenResolution_.first;
-    int pixelY = pixelId / screenResolution_.first;
+RTPixelColor Camera::renderPixelColor
+(
+    const SceneManager& sceneManager,
+    const int pixelId,
+    const std::pair<int, int> screenResolution
+) {
+    int pixelX = pixelId % screenResolution.first;
+    int pixelY = pixelId / screenResolution.first;
 
     RTColor sampleSumColor = RTColor(0,0,0);
-    for (int sample = 0; sample < samplesPerPixel_; sample++) {
-        Ray ray = genRay(pixelX, pixelY);
-        RTColor rayColor = getRayColor(ray, maxRayDepth_, sceneManager);
+    for (int sample = 0; sample < renderProperties_.samplesPerPixel; sample++) {
+        Ray ray = genRay(pixelX, pixelY, screenResolution);
+        RTColor rayColor = getRayColor(ray, renderProperties_.maxRayDepth, sceneManager);
 
         sampleSumColor += rayColor;
-    }   
-    setPixel(pixelX, pixelY, convertRTColor(sampleSumColor * pixelSamplesScale_));
+    }
+    return convertRTColor(sampleSumColor * pixelSamplesScale_);
 }
 
-Ray Camera::genRay(int pixelX, int pixelY) {
-    double deltaWidth = viewPort_.VIEWPORT_WIDTH / screenResolution_.first;
-    double deltaHeight = viewPort_.VIEWPORT_HEIGHT / screenResolution_.second;
+Ray Camera::genRay(int pixelX, int pixelY, std::pair<int, int> screenResolution) {
+    double deltaWidth = viewPort_.VIEWPORT_WIDTH / screenResolution.first;
+    double deltaHeight = viewPort_.VIEWPORT_HEIGHT / screenResolution.second;
 
     gm::IPoint3 viewPortPoint =  viewPort_.upperLeft_                                                 +
                                         viewPort_.rightDir_ * (pixelX + gm::randomDouble(0.0, 1.0)) * deltaWidth +
@@ -125,7 +131,6 @@ Ray Camera::genRay(int pixelX, int pixelY) {
 
     return Ray(center_, rayDirection.normalized());
 }
-
 
 RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager& sceneManager) const {
     if (depth == 0) return RTColor(0,0,0);
@@ -138,17 +143,13 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
         if (rec.object->selected()) emitted += selected_delta;
 
         gm::IVec3f LIndirect = computeMultipleScatterLInderect(ray, rec, depth, sceneManager);
-        gm::IVec3f LDirect   = (enableLDirect_ ? computeDirectLighting(rec, sceneManager) : gm::IVec3f{0, 0, 0});
+        gm::IVec3f LDirect   = (renderProperties_.enableLDirect ? computeDirectLighting(rec, sceneManager) : gm::IVec3f{0, 0, 0});
         
         return emitted + LIndirect + LDirect;
     }
 
     auto a = 0.5*(ray.direction.y() + 1.0);
     return RTColor(1.0, 1.0, 1.0) * (1.0-a) + RTColor(0.5, 0.7, 1.0) * a;   
-}
-
-void Camera::setPixel(const int pixelX, const int pixelY, const RTPixelColor color) {
-    pixels_[pixelX * screenResolution_.second + pixelY] = color;
 }
 
 
@@ -173,7 +174,7 @@ gm::IVec3f Camera::computeMultipleScatterLInderect(const Ray& ray, const HitReco
                                                   const int depth, const SceneManager& sceneManager) const
 {
     gm::IVec3f LIndirect = {0, 0, 0};
-    for (int i = 0; i < samplesPerScatter_; i++) {
+    for (int i = 0; i < renderProperties_.samplesPerScatter; i++) {
         Ray scattered = {};
         RTColor attenuation = {};
         
@@ -203,39 +204,27 @@ void Camera::updateViewPort() {
     viewPort_.downDir_ = cross(direction_, viewPort_.rightDir_).normalized();
 
     gm::IVec3f rightFull = viewPort_.rightDir_ * viewPort_.VIEWPORT_WIDTH;
-    gm::IVec3f downFull    = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
+    gm::IVec3f downFull  = viewPort_.downDir_ * viewPort_.VIEWPORT_HEIGHT;
 
     viewPort_.upperLeft_ = center_ + direction_ * FOCAL_LENGTH - rightFull* 0.5 - downFull * 0.5; 
-}
 
+    viewPort_.viewAngle_.setX(2 * std::atan(viewPort_.VIEWPORT_HEIGHT / FOCAL_LENGTH));
+    viewPort_.viewAngle_.setY(2 * std::atan(viewPort_.VIEWPORT_WIDTH / FOCAL_LENGTH));
+}
 
 // Getters
 gm::IVec3f Camera::direction() const { return direction_; }
-RTPixelColor Camera::getPixel(const int pixelX, const int pixelY) const {
-    return pixels_[pixelX * screenResolution_.second + pixelY];
-}
-const std::vector<RTPixelColor> Camera::pixels() const { return pixels_; }
-const std::pair<int, int> &Camera::screenResolution() const { return screenResolution_; }
-gm::IVec2f Camera::viewAngle() const { return viewAngle_; }
-const Viewport &Camera::viewPort() const { return viewPort_; }
 const gm::IPoint3 Camera::center() const { return center_; }
 
 // Setters
-void Camera::setSamplesPerPixel(int newVal) {
-    samplesPerPixel_ = newVal;
-    pixelSamplesScale_ = 1.0 / samplesPerPixel_; 
+void Camera::setRenderProperties(const CameraRenderProperties &properties) {
+    renderProperties_ = properties;
 }
-void Camera::setSamplesPerScatter(int newVal) {
-    samplesPerScatter_ = newVal;
-    sampleScatterScale_ = 1.0 / samplesPerScatter_; 
+void Camera::setCenter(const gm::IPoint3 center) { 
+    center_ = center; 
+    updateViewPort();
 }
-void Camera::setThreadPixelbunchSize(const int newVal) {
-    threadPixelbunchSize_ = newVal;
+void Camera::setDirection(const gm::IVec3f direction) {
+    direction_ = direction;
+    updateViewPort();
 }
-void Camera::disableLDirect() { enableLDirect_ = false; }
-void Camera::enableLDirect() { enableLDirect_ = true; }
-void Camera::setMaxRayDepth(int newVal) { maxRayDepth_ = newVal; }
-void Camera::enableParallelRender() { enableparallelRender_ = true; }
-void Camera::disableParallelRender() { enableparallelRender_ = false; }
-void Camera::enableRayTracerMode() { enableRayTracerMode_ = true; }
-void Camera::disableRayTracerMode() { enableRayTracerMode_ = false; }

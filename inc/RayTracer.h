@@ -21,13 +21,8 @@ public:
 
     const std::vector<Light *> &inderectLightSources() const;
 
-    void render(Camera &camera);
-
     const std::vector<Primitives *> &primitives() const { return primitives_; }
     const std::vector<Light *> &lights() const { return directLightSources_; }
-
-    private:
-        void update();
 };
 
 
