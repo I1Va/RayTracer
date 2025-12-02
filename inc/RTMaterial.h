@@ -1,6 +1,6 @@
 #ifndef RTMATERIAL_H
 #define RTMATERIAL_H
-
+#include <memory>
 
 #include "RTGeometry.h"
 using RTColor = gm::IVec3f;
