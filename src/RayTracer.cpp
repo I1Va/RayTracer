@@ -27,6 +27,7 @@ void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
     primitives_.push_back(object);
 }
 
+
 void SceneManager::addLight(gm::IPoint3 position, Light *light) {
     assert(light);
 
@@ -36,6 +37,13 @@ void SceneManager::addLight(gm::IPoint3 position, Light *light) {
     light->setParent(this);
     light->setPosition(position);
     directLightSources_.push_back(light);
+}
+
+void SceneManager::addObject(Primitives *object) {
+    addObject(object->position(), object);
+}
+void SceneManager::addLight(Light *light) {
+    addLight(light->position(), light);
 }
 
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
