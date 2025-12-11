@@ -59,5 +59,15 @@ bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRe
         }
     }
 
+    if (!hitAnything) {
+        for (Primitives *object: primitives_) {
+            if (object->hitExpanded(ray, Interval(rayTime.min, closestTime), tempRecord)) {
+                hitAnything = true;
+                closestTime = tempRecord.time;
+                hitRecord = tempRecord;
+            }
+        }
+    }
+
     return hitAnything;
 }

@@ -53,6 +53,7 @@ struct HitRecord {
     const Primitives *object = nullptr;
     bool frontFace = false;
     double time = 0;
+    bool hitExpanded = false;
 
     void setFaceNormal(const Ray& ray, const gm::IVec3f& outwardNormal) {
         frontFace = dot(ray.direction, outwardNormal) < 0;

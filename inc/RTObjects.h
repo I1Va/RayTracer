@@ -17,6 +17,8 @@ class SceneManager;
 
 class Primitives {
 protected:
+    static constexpr double EXPAND_COEF = 1.05;
+
     const SceneManager *parent_;
     
     RTMaterial *material_;
@@ -32,6 +34,7 @@ public:
     virtual ~Primitives() = default;
 
     virtual bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
+    virtual bool hitExpanded(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const = 0;
 
     virtual std::string typeString() const { return "Primitive"; }
 
@@ -51,14 +54,41 @@ friend SceneManager;
 class SphereObject : public Primitives {
     double radius_;
 
+
 public:
     SphereObject(double radius, RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
-        gm::IVec3f oc = ray.origin - position_;
+        return hitDetail(ray, rayTime, rec, radius_, position_, material_);
+    }
+
+    bool hitExpanded(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
+        if (!selected()) return false;
+        if (hitDetail(ray, rayTime, rec, radius_, position_, material_)) {
+            return true;
+        }
+    
+        bool result = hitDetail(ray, rayTime, rec, radius_ * EXPAND_COEF, position_, material_);
+        if (result) rec.hitExpanded = true;
+        return result;
+    }
+
+    float getRadius() const { return radius_; }
+    void setRadius(const float val) { radius_ = val; }
+
+    std::string typeString() const override { return "Sphere"; }
+
+private:
+    bool hitDetail
+    (
+        const Ray& ray, Interval rayTime, HitRecord& rec,
+        double radius, gm::IPoint3 position, RTMaterial *material
+    ) const
+    {
+        gm::IVec3f oc = ray.origin - position;
         double a = dot(ray.direction, ray.direction);         
         double half_b = dot(oc, ray.direction);              
-        double c = dot(oc, oc) - radius_ * radius_;
+        double c = dot(oc, oc) - radius * radius;
 
         double discriminant = half_b*half_b - a*c;
         if (discriminant < 0.0) return false;
@@ -74,17 +104,12 @@ public:
         rec.time = root;
         rec.point = ray.origin + ray.direction * root;
 
-        gm::IVec3f outwardNormal = (rec.point - position_) / radius_; 
+        gm::IVec3f outwardNormal = (rec.point - position) / radius; 
         rec.setFaceNormal(ray, outwardNormal);
-        rec.material = material_;
+        rec.material = material;
         rec.object = this;
         return true;
     }
-
-    float getRadius() const { return radius_; }
-    void setRadius(const float val) { radius_ = val; }
-
-    std::string typeString() const override { return "Sphere"; }
 };
 
 class PlaneObject : public Primitives {
@@ -96,7 +121,7 @@ public:
         const gm::IPoint3 point, gm::IVec3f normal,
         RTMaterial *material, const SceneManager *parent=nullptr
     ):
-        Primitives(material, parent), normal_(normal.normalized()) { position_ = point; std::cout << "point : " << position_ << "\n"; }
+        Primitives(material, parent), normal_(normal.normalized()) { position_ = point; }
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const override {
         double time = dot(normal_, position_ - ray.origin) * (1.0 / dot(normal_, ray.direction));
@@ -115,6 +140,10 @@ public:
          
 
         return true;
+    }
+
+    virtual bool hitExpanded(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const override {
+        return hit(ray, rayTime, hitRecord);
     }
 
     void setNormal(const gm::IVec3f normal) { normal_ = normal; }
