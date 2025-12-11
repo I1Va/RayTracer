@@ -35,8 +35,8 @@ public:
 
     virtual std::string typeString() const { return "Primitive"; }
 
-    void setPosition(const gm::IPoint3 position) { position_ = position; }
-    gm::IPoint3 position() const { return position_; }
+    virtual void setPosition(const gm::IPoint3 position) { position_ = position; }
+    virtual gm::IPoint3 position() const { return position_; }
 
     const RTMaterial* material() const { return material_; }
     RTMaterial* material() { return material_; }
@@ -81,11 +81,13 @@ public:
         return true;
     }
 
+    float getRadius() const { return radius_; }
+    void setRadius(const float val) { radius_ = val; }
+
     std::string typeString() const override { return "Sphere"; }
 };
 
 class PlaneObject : public Primitives {
-    gm::IPoint3 point_;
     gm::IVec3f normal_;
 
 public:
@@ -94,10 +96,10 @@ public:
         const gm::IPoint3 point, gm::IVec3f normal,
         RTMaterial *material, const SceneManager *parent=nullptr
     ):
-        Primitives(material, parent), point_(point), normal_(normal.normalized()) {}
+        Primitives(material, parent), normal_(normal.normalized()) { position_ = point; std::cout << "point : " << position_ << "\n"; }
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const override {
-        double time = dot(normal_, point_ - ray.origin) * (1.0 / dot(normal_, ray.direction));
+        double time = dot(normal_, position_ - ray.origin) * (1.0 / dot(normal_, ray.direction));
 
         if (!rayTime.surrounds(time)) return false;
 
@@ -114,6 +116,9 @@ public:
 
         return true;
     }
+
+    void setNormal(const gm::IVec3f normal) { normal_ = normal; }
+    gm::IVec3f getNormal() const { return normal_; }
 
     std::string typeString() const override { return "Plane"; }
 };
