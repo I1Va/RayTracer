@@ -19,7 +19,7 @@ public:
     void addLight(Light *light);
 
 
-    bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const;
+    bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord, bool hitExpandedState) const;
 
     const std::vector<Light *> &inderectLightSources() const;
 

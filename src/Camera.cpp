@@ -136,10 +136,10 @@ RTColor Camera::getRayColor(const Ray& ray, const int depth, const SceneManager&
     if (depth == 0) return RTColor(0,0,0);
 
     HitRecord rec = {};
-    if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec)) {
+    if (sceneManager.hitClosest(ray, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), rec, depth == renderProperties.maxRayDepth)) {
         gm::IVec3f emitted = rec.material->emitted();
 
-        if (rec.hitExpanded && depth == renderProperties.maxRayDepth) {
+        if (rec.hitExpanded) {
             RTColor selectionColor(1.0, 0.0, 0.0);
             emitted = selectionColor;
         }
@@ -164,7 +164,7 @@ gm::IVec3f Camera::computeDirectLighting(const HitRecord &rec, const SceneManage
         Ray toLightRay = Ray(rec.point, lightSrc->position() - rec.point);
     
         HitRecord tmp;
-        bool hitted = sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp);
+        bool hitted = sceneManager.hitClosest(toLightRay, Interval(CLOSEST_HIT_MIN_T, std::numeric_limits<double>::infinity()), tmp, false);
         if (hitted && tmp.object == rec.object) {
             hitted = false;
         }

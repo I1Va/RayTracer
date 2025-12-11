@@ -46,27 +46,35 @@ void SceneManager::addLight(Light *light) {
     addLight(light->position(), light);
 }
 
-bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord) const {
-    HitRecord tempRecord = {};
-    bool hitAnything = false;
-    double closestTime = rayTime.max;
+bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord, bool hitExpandedState) const {
+    HitRecord tempRec = {};
+    double closestHitTime = rayTime.max;
 
+    HitRecord expandedRec = {};
+    double closestExpandedHitTime = rayTime.max;
+
+    bool hitAnything = false;
+    
     for (Primitives *object: primitives_) {
-        if (object->hit(ray, Interval(rayTime.min, closestTime), tempRecord)) {
+        if (object->hit(ray, Interval(rayTime.min, closestHitTime), tempRec)) {
             hitAnything = true;
-            closestTime = tempRecord.time;
-            hitRecord = tempRecord;
+            closestHitTime = tempRec.time;
         }
     }
 
-    if (!hitAnything) {
+    if (hitExpandedState) {
         for (Primitives *object: primitives_) {
-            if (object->hitExpanded(ray, Interval(rayTime.min, closestTime), tempRecord)) {
+            if (object->hitExpanded(ray, Interval(rayTime.min, closestExpandedHitTime), expandedRec)) {
                 hitAnything = true;
-                closestTime = tempRecord.time;
-                hitRecord = tempRecord;
+                closestExpandedHitTime = expandedRec.time;
             }
         }
+    }
+
+    if (closestExpandedHitTime < closestHitTime) {
+        hitRecord = expandedRec;
+    } else {
+        hitRecord = tempRec;
     }
 
     return hitAnything;
