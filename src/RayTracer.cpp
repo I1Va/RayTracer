@@ -47,6 +47,11 @@ void SceneManager::addLight(Light *light) {
 }
 
 void SceneManager::clear() {
+    for (Primitives *object : primitives_)
+        if (object) delete object;
+    for (Light *object : directLightSources_)
+        if (object) delete object;
+
     primitives_.clear();
     directLightSources_.clear();
 }

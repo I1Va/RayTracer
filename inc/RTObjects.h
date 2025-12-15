@@ -34,7 +34,6 @@ protected:
     }
     Primitives(const SceneManager *parent=nullptr): parent_(parent) {}
 
-    // dump/scan order: typeString position.x position.y position.z selected
     virtual std::ostream &dump(std::ostream &stream) const {
         stream 
         << typeString()   << ' '
@@ -162,6 +161,7 @@ class PlaneObject : public Primitives {
     gm::IVec3f normal_;
 
 public:
+    PlaneObject(const SceneManager *parent=nullptr): Primitives(parent) {}
     PlaneObject
     (
         const gm::IPoint3 point, gm::IVec3f normal,

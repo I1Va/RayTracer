@@ -36,7 +36,9 @@ RTPixelColor convertRTColor(const RTColor &color) {
 
 
 // Constructors
-Camera::Camera() { updateViewPort(); }
+Camera::Camera() { 
+    updateViewPort(); 
+}
 
 // Camera control
 void Camera::move(const gm::IVec3f motionVec) {
@@ -116,7 +118,7 @@ RTPixelColor Camera::renderPixelColor
 
         sampleSumColor += rayColor;
     }
-    return convertRTColor(sampleSumColor * pixelSamplesScale_);
+    return convertRTColor(sampleSumColor * 1.0 / renderProperties.samplesPerPixel);
 }
 
 Ray Camera::genRay(int pixelX, int pixelY, std::pair<int, int> screenResolution) {
@@ -188,7 +190,8 @@ gm::IVec3f Camera::computeMultipleScatterLInderect(const Ray& ray, const HitReco
         }
     }
     
-    return LIndirect * sampleScatterScale_;
+    // Compute scale factor directly based on current settings
+    return LIndirect * (1.0 / renderProperties.samplesPerScatter);
 }
 
 

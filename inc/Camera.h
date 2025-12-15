@@ -51,8 +51,6 @@ private:
     gm::IVec3f  direction_ = gm::IVec3f(0, 0, 1);
 
     Viewport viewPort_  = {};
-    double pixelSamplesScale_   = 1.0 / renderProperties.samplesPerPixel;
-    double sampleScatterScale_  = 1.0 / renderProperties.samplesPerScatter;
 
 public:
   // Constructors
