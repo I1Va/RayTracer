@@ -252,7 +252,6 @@ public:
         iss >> type;
 
         std::unique_ptr<RTMaterial> mat;
-        std::cout << "type : " << type << "\n";
 
         if (type == "Lambertian") {
             mat = std::make_unique<RTLambertian>(gm::IVec3f{});
