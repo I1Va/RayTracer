@@ -3,6 +3,10 @@
 
 #include <vector>
 #include <string>
+#include <ostream>
+#include <istream>
+#include <cmath>
+#include <cassert>
 
 #include "Geom.hpp"
 #include "IVec3f.hpp"
@@ -19,9 +23,8 @@ class Primitives {
 protected:
     static constexpr double EXPAND_COEF = 1.05;
 
-    const SceneManager *parent_;
-    
-    RTMaterial *material_;
+    const SceneManager *parent_{nullptr};
+    RTMaterial *material_{nullptr};
 
     gm::IPoint3 position_{};
     bool selectFlag_ = false;
@@ -29,6 +32,31 @@ protected:
     Primitives(RTMaterial *material, const SceneManager *parent=nullptr): parent_(parent), material_(material) {
         assert(material);
     }
+    Primitives(const SceneManager *parent=nullptr): parent_(parent) {}
+
+    // dump/scan order: typeString position.x position.y position.z selected
+    virtual std::ostream &dump(std::ostream &stream) const {
+        stream 
+        << typeString()   << ' '
+        << position().x() << ' '
+        << position().y() << ' '
+        << position().z() << ' '
+        << selected();
+        return stream;
+    }
+
+    virtual std::istream &scan(std::istream &stream) {
+        float x, y, z;
+        bool sel;
+        stream >> x >> y >> z >> sel;
+        gm::IPoint3 pos(x, y, z);
+        setPosition(pos);
+        setSelectFlag(sel);
+        return stream;
+    }
+
+    friend inline std::ostream &operator<<(std::ostream &os, const Primitives &p);
+    friend inline std::istream &operator>>(std::istream &is, Primitives &p);
 
 public:
     virtual ~Primitives() = default;
@@ -41,9 +69,11 @@ public:
     virtual void setPosition(const gm::IPoint3 position) { position_ = position; }
     virtual gm::IPoint3 position() const { return position_; }
 
+    void setMaterial(RTMaterial *material) {
+        material_ = material;
+    }
     const RTMaterial* material() const { return material_; }
     RTMaterial* material() { return material_; }
-
 
     void setSelectFlag(bool val) {selectFlag_ = val; }
     bool selected() const { return selectFlag_; }
@@ -52,10 +82,10 @@ friend SceneManager;
 };
 
 class SphereObject : public Primitives {
-    double radius_;
-
+    double radius_ = 0.0;
 
 public:
+    SphereObject(const SceneManager *parent=nullptr): Primitives(parent) {}
     SphereObject(double radius, RTMaterial *material, const SceneManager *parent=nullptr): Primitives(material, parent), radius_(radius) {}
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
@@ -67,7 +97,7 @@ public:
         if (hitDetail(ray, rayTime, rec, radius_, position_, material_)) {
             return true;
         }
-    
+
         bool result = hitDetail(ray, rayTime, rec, radius_ * EXPAND_COEF, position_, material_);
         if (result) rec.hitExpanded = true;
         return result;
@@ -78,6 +108,22 @@ public:
 
     std::string typeString() const override { return "Sphere"; }
 
+protected:
+ 
+    std::ostream &dump(std::ostream &stream) const override {
+        Primitives::dump(stream);
+        stream << ' ' << radius_;
+        return stream;
+    }
+
+    std::istream &scan(std::istream &stream) override {
+        Primitives::scan(stream);
+        double r = 0.0;
+        stream >> r;
+        radius_ = r;
+        return stream;
+    }
+
 private:
     bool hitDetail
     (
@@ -86,15 +132,15 @@ private:
     ) const
     {
         gm::IVec3f oc = ray.origin - position;
-        double a = dot(ray.direction, ray.direction);         
-        double half_b = dot(oc, ray.direction);              
+        double a = dot(ray.direction, ray.direction);
+        double half_b = dot(oc, ray.direction);
         double c = dot(oc, oc) - radius * radius;
 
         double discriminant = half_b*half_b - a*c;
         if (discriminant < 0.0) return false;
 
         double sqrtd = std::sqrt(discriminant);
-        
+
         double root = (-half_b - sqrtd) / a;
         if (!rayTime.surrounds(root)) {
             root = (-half_b + sqrtd) / a;
@@ -104,7 +150,7 @@ private:
         rec.time = root;
         rec.point = ray.origin + ray.direction * root;
 
-        gm::IVec3f outwardNormal = (rec.point - position) / radius; 
+        gm::IVec3f outwardNormal = (rec.point - position) / radius;
         rec.setFaceNormal(ray, outwardNormal);
         rec.material = material;
         rec.object = this;
@@ -132,12 +178,11 @@ public:
         hitRecord.object = this;
         hitRecord.time = time;
         hitRecord.point = ray.origin + ray.direction * time;
-        
+
         gm::IVec3f outwardNormal = normal_;
-        if (dot(normal_, ray.direction) < 0) outwardNormal = normal_ * (-1);  
+        if (dot(normal_, ray.direction) < 0) outwardNormal = normal_ * (-1);
 
         hitRecord.setFaceNormal(ray, outwardNormal);
-         
 
         return true;
     }
@@ -150,6 +195,24 @@ public:
     gm::IVec3f getNormal() const { return normal_; }
 
     std::string typeString() const override { return "Plane"; }
+
+protected:
+    std::ostream &dump(std::ostream &stream) const override {
+        Primitives::dump(stream);
+        stream << ' '
+               << normal_.x() << ' '
+               << normal_.y() << ' '
+               << normal_.z();
+        return stream;
+    }
+
+    std::istream &scan(std::istream &stream) override {
+        Primitives::scan(stream);
+        float nx, ny, nz;
+        stream >> nx >> ny >> nz;
+        normal_ = gm::IVec3f(nx, ny, nz);
+        return stream;
+    }
 };
 
 class Light {
@@ -169,19 +232,19 @@ public:
         const gm::IVec3f specularIntensity,
         double viewLightPow,
         const SceneManager *parent=nullptr
-    ) : 
-    ambientIntensity_(ambientIntensity), 
-    defuseIntensity_(defuseIntensity), 
+    ) :
+    ambientIntensity_(ambientIntensity),
+    defuseIntensity_(defuseIntensity),
     specularIntensity_(specularIntensity),
     viewLightPow_(viewLightPow),
     parent_(parent) {}
-    
+
     virtual ~Light() = default;
 
-    virtual RTColor getDirectLighting(const gm::IVec3f toView, const HitRecord &rec, bool hitted) 
+    virtual RTColor getDirectLighting(const gm::IVec3f toView, const HitRecord &rec, bool hitted)
     {
         gm::IVec3f toLight = (position_ - rec.point).normalized();
-        
+
         gm::IVec3f ambientIntensity  = ambientIntensity_ * rec.material->diffuse();
         gm::IVec3f defuseIntensity   = defuseLightIntensity(toLight, rec.normal) * rec.material->diffuse();
         gm::IVec3f specularIntensity = specularLightIntesity(toLight, toView.normalized(), rec.normal);
@@ -197,6 +260,37 @@ public:
     void setParent(const SceneManager *parent) { parent_ = parent; }
     virtual std::string typeString() const { return "Light"; }
 
+    std::ostream &dump(std::ostream &stream) const {
+        stream
+            << position_.x() << ' ' << position_.y() << ' ' << position_.z() << ' '
+            << ambientIntensity_.x() << ' ' << ambientIntensity_.y() << ' ' << ambientIntensity_.z() << ' '
+            << defuseIntensity_.x()  << ' ' << defuseIntensity_.y()  << ' ' << defuseIntensity_.z()  << ' '
+            << specularIntensity_.x() << ' ' << specularIntensity_.y() << ' ' << specularIntensity_.z() << ' '
+            << viewLightPow_;
+        return stream;
+    }
+
+    std::istream &scan(std::istream &stream) {
+        float px, py, pz;
+        stream >> px >> py >> pz;
+        position_ = gm::IPoint3(px, py, pz);
+
+        float ax, ay, az;
+        stream >> ax >> ay >> az;
+        ambientIntensity_ = gm::IVec3f(ax, ay, az);
+
+        float dx, dy, dz;
+        stream >> dx >> dy >> dz;
+        defuseIntensity_ = gm::IVec3f(dx, dy, dz);
+
+        float sx, sy, sz;
+        stream >> sx >> sy >> sz;
+        specularIntensity_ = gm::IVec3f(sx, sy, sz);
+
+        stream >> viewLightPow_;
+        return stream;
+    }
+
 private:
     // Lambert
     gm::IVec3f defuseLightIntensity(const gm::IVec3f toLight, const gm::IVec3f surfNormal) {
@@ -210,17 +304,23 @@ private:
     // Phong
     gm::IVec3f specularLightIntesity(const gm::IVec3f toLight, const gm::IVec3f toView, const gm::IVec3f surfNormal) {
         gm::IVec3f surfToReflLight = toLight - getOrtogonal(toLight, surfNormal) * 2;
-        
+
         double view_angle_cos = dot(surfToReflLight.normalized(), toView.normalized());
-        
+
         if (view_angle_cos > 0) {
             double resCoef = std::pow(view_angle_cos, viewLightPow_);
-            return gm::IVec3f(resCoef); 
+            return gm::IVec3f(resCoef);
         }
 
-        return gm::IVec3f(0, 0, 0);        
+        return gm::IVec3f(0, 0, 0);
     }
 };
 
+inline std::ostream &operator<<(std::ostream &os, const Primitives &p) {
+    return p.dump(os);
+}
+inline std::istream &operator>>(std::istream &is, Primitives &p) {
+    return p.scan(is);
+}
 
 #endif // RTOBJECTS_H

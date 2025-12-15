@@ -46,6 +46,11 @@ void SceneManager::addLight(Light *light) {
     addLight(light->position(), light);
 }
 
+void SceneManager::clear() {
+    primitives_.clear();
+    directLightSources_.clear();
+}
+
 bool SceneManager::hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord, bool hitExpandedState) const {
     HitRecord tempRec = {};
     double closestHitTime = rayTime.max;

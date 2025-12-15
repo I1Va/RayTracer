@@ -17,6 +17,7 @@ public:
     void addLight(const gm::IPoint3 position, Light *light);
     void addObject(Primitives *object);
     void addLight(Light *light);
+    void clear();
 
 
     bool hitClosest(const Ray& ray, Interval rayTime, HitRecord& hitRecord, bool hitExpandedState) const;
