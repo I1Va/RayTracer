@@ -7,6 +7,8 @@
 #include <istream>
 #include <cmath>
 #include <cassert>
+#include <algorithm>
+#include <limits>
 
 #include "Geom.hpp"
 #include "IVec3f.hpp"
@@ -318,8 +320,8 @@ private:
 
 class PolygonObject : public Primitives {
     std::vector<gm::IPoint3> vertices_;
-    gm::IVec3f normal_;   // unit normal
-    gm::IPoint3 centroid_; // average of vertices
+    gm::IVec3f normal_; 
+    gm::IPoint3 centroid_; 
 
 public:
     PolygonObject(const SceneManager *parent=nullptr): Primitives(parent) {}
@@ -339,6 +341,23 @@ public:
     const std::vector<gm::IPoint3>& vertices() const { return vertices_; }
     gm::IVec3f normal() const { return normal_; }
     gm::IPoint3 centroid() const { return centroid_; }
+
+    void setPosition(const gm::IPoint3 position) override {
+        gm::IVec3f delta = position - centroid_;
+        for (auto &v : vertices_) {
+            v = gm::IPoint3(
+                v.x() + delta.x(),
+                v.y() + delta.y(),
+                v.z() + delta.z()
+            );
+        }
+        centroid_ = position;
+        position_ = position;
+    }
+
+    gm::IPoint3 position() const override {
+        return centroid_;
+    }
 
     std::string typeString() const override { return "Polygon"; }
 
@@ -409,7 +428,6 @@ private:
         if (vertices_.size() >= 3) {
             gm::IVec3f a = vertices_[1] - vertices_[0];
             gm::IVec3f b = vertices_[2] - vertices_[0];
-            // cross product manually to avoid depending on a member API
             gm::IVec3f cr(
                 a.y() * b.z() - a.z() * b.y(),
                 a.z() * b.x() - a.x() * b.z(),
@@ -421,23 +439,18 @@ private:
         }
     }
 
-    // Project point and polygon to 2D by dropping the coordinate where normal has largest absolute component.
     static void projectTo2D(const gm::IVec3f &normal, const gm::IPoint3 &p, double &u, double &v) {
         double ax = std::fabs(normal.x()), ay = std::fabs(normal.y()), az = std::fabs(normal.z());
         if (ax > ay && ax > az) {
-            // drop x -> use (y,z)
             u = p.y(); v = p.z();
         } else if (ay > az) {
-            // drop y -> use (x,z)
             u = p.x(); v = p.z();
         } else {
-            // drop z -> use (x,y)
             u = p.x(); v = p.y();
         }
     }
 
     static bool pointInPolygon2D(const std::vector<std::pair<double,double>> &poly, double px, double py) {
-        // winding number / crossing number algorithm
         bool inside = false;
         size_t n = poly.size();
         for (size_t i = 0, j = n - 1; i < n; j = i++) {
@@ -462,14 +475,13 @@ private:
         if (vertices.size() < 3) return false;
 
         double denom = dot(normal, ray.direction);
-        if (std::fabs(denom) < 1e-12) return false; // parallel
+        if (std::fabs(denom) < 1e-12) return false; 
 
         double t = dot(normal, centroid - ray.origin) / denom;
         if (!rayTime.surrounds(t)) return false;
 
         gm::IPoint3 p = ray.origin + ray.direction * t;
 
-        // project polygon and point to 2D
         std::vector<std::pair<double,double>> poly2d;
         poly2d.reserve(vertices.size());
         double px, py;
@@ -490,16 +502,13 @@ private:
 
         rec.setFaceNormal(ray, outwardNormal);
         rec.material = material;
-        rec.object = nullptr; // will be set by caller if needed; in this context cannot set "this" because static
-        // But we can set object to something: we cannot access 'this' here (static). The caller uses instance method so assign below.
-        // To keep semantics consistent, the non-static wrapper will set rec.object = this.
+        rec.object = nullptr;
         if (!markExpanded) {
-            // nothing else
+            
         }
         return true;
     }
 
-    // Non-static wrapper to set rec.object properly.
     bool hitDetailWrapper(const Ray& ray, Interval rayTime, HitRecord& rec,
                           const std::vector<gm::IPoint3> &vertices,
                           const gm::IVec3f &normal,
@@ -510,13 +519,11 @@ private:
         HitRecord localRec;
         bool ok = hitDetail(ray, rayTime, localRec, vertices, normal, centroid, material, markExpanded);
         if (!ok) return false;
-        // copy fields and set object pointer
         rec = localRec;
         rec.object = const_cast<PolygonObject*>(this);
         return true;
     }
 
-    // Override base methods to call wrapper so rec.object is set properly
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec, const std::vector<gm::IPoint3> &verts, const gm::IVec3f &norm, const gm::IPoint3 &cent) const {
         return hitDetailWrapper(ray, rayTime, rec, verts, norm, cent, material_, false);
     }
@@ -525,11 +532,121 @@ private:
         return hitDetailWrapper(ray, rayTime, rec, verts, norm, cent, material_, true);
     }
 
-    // adapt public hit() and hitExpanded() to use wrapper (so rec.object points to this)
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec, bool) const {
         return hitDetailWrapper(ray, rayTime, rec, vertices_, normal_, centroid_, material_, false);
     }
 };
+
+/* ------------------ CubeObject (axis-aligned box) ------------------ */
+class CubeObject : public Primitives {
+    gm::IVec3f halfSize_; 
+
+public:
+    CubeObject(const SceneManager *parent=nullptr): Primitives(parent), halfSize_(0.5, 0.5, 0.5) {}
+    CubeObject(const gm::IVec3f &halfSize, RTMaterial *material, const SceneManager *parent=nullptr)
+        : Primitives(material, parent), halfSize_(halfSize) {}
+
+    std::string typeString() const override { return "Cube"; }
+
+    void setHalfSize(const gm::IVec3f &hs) { halfSize_ = hs; }
+    gm::IVec3f halfSize() const { return halfSize_; }
+
+    bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
+        return hitBox(ray, rayTime, rec, position_, halfSize_, material_, /*markExpanded*/false);
+    }
+
+    bool hitExpanded(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
+        if (!selected()) return false;
+        if (hit(ray, rayTime, rec)) return true;
+
+        gm::IVec3f expandedHalf = halfSize_ * EXPAND_COEF;
+        bool result = hitBox(ray, rayTime, rec, position_, expandedHalf, material_, /*markExpanded*/true);
+        if (result) rec.hitExpanded = true;
+        return result;
+    }
+
+protected:
+    std::ostream &dump(std::ostream &stream) const override {
+        Primitives::dump(stream);
+        stream << ' ' << halfSize_.x() << ' ' << halfSize_.y() << ' ' << halfSize_.z();
+        return stream;
+    }
+
+    std::istream &scan(std::istream &stream) override {
+        Primitives::scan(stream);
+        float hx, hy, hz;
+        stream >> hx >> hy >> hz;
+        halfSize_ = gm::IVec3f(hx, hy, hz);
+        return stream;
+    }
+
+private:
+    static bool hitBox(
+        const Ray& ray, Interval rayTime, HitRecord& rec,
+        const gm::IPoint3 &center,
+        const gm::IVec3f &halfSize,
+        RTMaterial *material,
+        bool /*markExpanded*/
+    ) {
+        const double EPS = 1e-6;
+        double tmin = -std::numeric_limits<double>::infinity();
+        double tmax =  std::numeric_limits<double>::infinity();
+
+        double orig[3] = { ray.origin.x(), ray.origin.y(), ray.origin.z() };
+        double dir[3]  = { ray.direction.x(), ray.direction.y(), ray.direction.z() };
+        double minB[3] = { center.x() - halfSize.x(), center.y() - halfSize.y(), center.z() - halfSize.z() };
+        double maxB[3] = { center.x() + halfSize.x(), center.y() + halfSize.y(), center.z() + halfSize.z() };
+
+        double t0s[3], t1s[3];
+
+        for (int i = 0; i < 3; ++i) {
+            if (std::fabs(dir[i]) < 1e-12) {
+                if (orig[i] < minB[i] || orig[i] > maxB[i]) return false;
+                t0s[i] = -std::numeric_limits<double>::infinity();
+                t1s[i] =  std::numeric_limits<double>::infinity();
+            } else {
+                double invD = 1.0 / dir[i];
+                double t0 = (minB[i] - orig[i]) * invD;
+                double t1 = (maxB[i] - orig[i]) * invD;
+                if (t0 > t1) std::swap(t0, t1);
+                t0s[i] = t0; t1s[i] = t1;
+                tmin = std::max(tmin, t0);
+                tmax = std::min(tmax, t1);
+                if (tmax < tmin) return false;
+            }
+        }
+
+        double t = tmin;
+        if (!rayTime.surrounds(t)) {
+            t = tmax;
+            if (!rayTime.surrounds(t)) return false;
+        }
+
+        rec.time = t;
+        rec.point = ray.origin + ray.direction * t;
+
+        gm::IVec3f outwardNormal(0.0, 0.0, 0.0);
+        if (std::fabs(rec.point.x() - minB[0]) < EPS) outwardNormal = gm::IVec3f(-1, 0, 0);
+        else if (std::fabs(rec.point.x() - maxB[0]) < EPS) outwardNormal = gm::IVec3f(1, 0, 0);
+        else if (std::fabs(rec.point.y() - minB[1]) < EPS) outwardNormal = gm::IVec3f(0, -1, 0);
+        else if (std::fabs(rec.point.y() - maxB[1]) < EPS) outwardNormal = gm::IVec3f(0, 1, 0);
+        else if (std::fabs(rec.point.z() - minB[2]) < EPS) outwardNormal = gm::IVec3f(0, 0, -1);
+        else if (std::fabs(rec.point.z() - maxB[2]) < EPS) outwardNormal = gm::IVec3f(0, 0, 1);
+        else {
+            gm::IVec3f local = rec.point - center;
+            double ax = std::fabs(local.x()), ay = std::fabs(local.y()), az = std::fabs(local.z());
+            if (ax > ay && ax > az) outwardNormal = gm::IVec3f((local.x() > 0) ? 1 : -1, 0, 0);
+            else if (ay > az) outwardNormal = gm::IVec3f(0, (local.y() > 0) ? 1 : -1, 0);
+            else outwardNormal = gm::IVec3f(0, 0, (local.z() > 0) ? 1 : -1);
+        }
+
+        rec.setFaceNormal(ray, outwardNormal);
+        rec.material = material;
+        rec.object = nullptr; 
+        return true;
+    }
+};
+/* ------------------------------------------------------------------ */
 
 inline std::ostream &operator<<(std::ostream &os, const Primitives &p) {
     return p.dump(os);
