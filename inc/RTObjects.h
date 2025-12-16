@@ -599,19 +599,14 @@ private:
         double minB[3] = { center.x() - halfSize.x(), center.y() - halfSize.y(), center.z() - halfSize.z() };
         double maxB[3] = { center.x() + halfSize.x(), center.y() + halfSize.y(), center.z() + halfSize.z() };
 
-        double t0s[3], t1s[3];
-
         for (int i = 0; i < 3; ++i) {
             if (std::fabs(dir[i]) < 1e-12) {
                 if (orig[i] < minB[i] || orig[i] > maxB[i]) return false;
-                t0s[i] = -std::numeric_limits<double>::infinity();
-                t1s[i] =  std::numeric_limits<double>::infinity();
             } else {
                 double invD = 1.0 / dir[i];
                 double t0 = (minB[i] - orig[i]) * invD;
                 double t1 = (maxB[i] - orig[i]) * invD;
                 if (t0 > t1) std::swap(t0, t1);
-                t0s[i] = t0; t1s[i] = t1;
                 tmin = std::max(tmin, t0);
                 tmax = std::min(tmax, t1);
                 if (tmax < tmin) return false;

@@ -27,6 +27,14 @@ void SceneManager::addObject(gm::IPoint3 position, Primitives *object) {
     primitives_.push_back(object);
 }
 
+void SceneManager::eraseObject(Primitives *primitive) {
+    auto it = std::find(primitives_.begin(), primitives_.end(), primitive);
+    if (it == primitives_.end()) return;
+    primitives_.erase(it);
+}
+
+
+
 
 void SceneManager::addLight(gm::IPoint3 position, Light *light) {
     assert(light);
@@ -42,6 +50,7 @@ void SceneManager::addLight(gm::IPoint3 position, Light *light) {
 void SceneManager::addObject(Primitives *object) {
     addObject(object->position(), object);
 }
+
 void SceneManager::addLight(Light *light) {
     addLight(light->position(), light);
 }

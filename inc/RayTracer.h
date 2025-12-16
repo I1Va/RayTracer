@@ -14,6 +14,7 @@ public:
     ~SceneManager();
 
     void addObject(const gm::IPoint3 position, Primitives *object);
+    void eraseObject(Primitives *primitive);
     void addLight(const gm::IPoint3 position, Light *light);
     void addObject(Primitives *object);
     void addLight(Light *light);
