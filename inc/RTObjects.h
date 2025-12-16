@@ -227,6 +227,7 @@ class Light {
     const SceneManager *parent_;
 
 public:
+    Light(const SceneManager *parent=nullptr): parent_(parent) {}
     Light
     (
         const gm::IVec3f ambientIntensity,
@@ -260,10 +261,11 @@ public:
 
     const SceneManager *parent() const { return parent_; }
     void setParent(const SceneManager *parent) { parent_ = parent; }
+
     virtual std::string typeString() const { return "Light"; }
 
-    std::ostream &dump(std::ostream &stream) const {
-        stream
+    virtual std::ostream &dump(std::ostream &stream) const {
+        stream << typeString() << ' '
             << position_.x() << ' ' << position_.y() << ' ' << position_.z() << ' '
             << ambientIntensity_.x() << ' ' << ambientIntensity_.y() << ' ' << ambientIntensity_.z() << ' '
             << defuseIntensity_.x()  << ' ' << defuseIntensity_.y()  << ' ' << defuseIntensity_.z()  << ' '
@@ -272,7 +274,7 @@ public:
         return stream;
     }
 
-    std::istream &scan(std::istream &stream) {
+    virtual std::istream &scan(std::istream &stream) {
         float px, py, pz;
         stream >> px >> py >> pz;
         position_ = gm::IPoint3(px, py, pz);
@@ -549,7 +551,7 @@ public:
     std::string typeString() const override { return "Cube"; }
 
     void setHalfSize(const gm::IVec3f &hs) { halfSize_ = hs; }
-    gm::IVec3f halfSize() const { return halfSize_; }
+    gm::IVec3f getHalfSize() const { return halfSize_; }
 
     bool hit(const Ray& ray, Interval rayTime, HitRecord& rec) const override {
         return hitBox(ray, rayTime, rec, position_, halfSize_, material_, /*markExpanded*/false);
@@ -653,6 +655,13 @@ inline std::ostream &operator<<(std::ostream &os, const Primitives &p) {
 }
 inline std::istream &operator>>(std::istream &is, Primitives &p) {
     return p.scan(is);
+}
+
+inline std::ostream &operator<<(std::ostream &os, const Light &l) {
+    return l.dump(os);
+}
+inline std::istream &operator>>(std::istream &is, Light &l) {
+    return l.scan(is);
 }
 
 #endif // RTOBJECTS_H
