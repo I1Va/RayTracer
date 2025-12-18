@@ -8,7 +8,6 @@
 
 // Utilities
 static constexpr double CLOSEST_HIT_MIN_T = 0.001;
-
 inline double linearToGamma(double linear_component)
 {
     if (linear_component > 0)
@@ -77,18 +76,12 @@ void Camera::renderParallel
     assert(pixelCount == static_cast<int>(outputBufer.size()));
     pixelCount = std::min(pixelCount, static_cast<int>(outputBufer.size()));
     
-    gm::resetRandomGenerator
-    (
-        /*generatorsNum*/ screenResolution.first * screenResolution.second, 
-        omp_get_max_threads()
-    );
-
+    gm::setThreadsNum(omp_get_max_threads());
     #pragma omp parallel
     {
-        #pragma omp for schedule(dynamic,renderProperties.threadPixelbunchSize)
+        #pragma omp for schedule(static)
         for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
-            gm::setThreadGeneratorId(pixelId);
-            #pragma omp critical
+            gm::setThreadSeed(pixelId);
             outputBufer[pixelId] = renderPixelColor(sceneManager, pixelId, screenResolution);
         }
     }
