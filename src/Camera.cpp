@@ -76,19 +76,22 @@ void Camera::renderParallel
     int pixelCount = screenResolution.first * screenResolution.second;
     assert(pixelCount == static_cast<int>(outputBufer.size()));
     pixelCount = std::min(pixelCount, static_cast<int>(outputBufer.size()));
+    
+    gm::resetRandomGenerator
+    (
+        /*generatorsNum*/ screenResolution.first * screenResolution.second, 
+        omp_get_max_threads()
+    );
 
-    gm::resetGenerators();
     #pragma omp parallel
     {
         #pragma omp for schedule(dynamic,renderProperties.threadPixelbunchSize)
         for (int pixelId = 0; pixelId < pixelCount; ++pixelId) {
-            gm::setThreadPixelId(omp_get_thread_num(), pixelId);
+            gm::setThreadGeneratorId(pixelId);
             #pragma omp critical
-            { std::cout << "{tid" << omp_get_thread_num() << ", " << pixelId << ", " << gm::randomDouble() << "} "; }
             outputBufer[pixelId] = renderPixelColor(sceneManager, pixelId, screenResolution);
         }
     }
-    std::cout << "--new frame--\n";
 }
 
 void Camera::renderSerial
